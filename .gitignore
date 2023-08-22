@@ -1,0 +1,7 @@
+.env
+venv
+memory_data
+mygpt.yaml
+redis_data
+documents
+postgres_data
