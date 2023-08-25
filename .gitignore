@@ -7,3 +7,4 @@ documents
 postgres_data
 my_code/*
 !my_code/.gitkeep
+storage
