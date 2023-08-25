@@ -5,6 +5,7 @@ from mygpt.llms.chat_managers import ChainChatManager, SingleChatManager
 from mygpt.llms.expert_agents import ExpertAgentManager
 from mygpt.llms.openai import OpenAIApiManager
 from mygpt.memory.factory import MemoryFactory
+from mygpt.toolkit.modules import ModuleLoader
 from shared.config import Config, DefaultAgentTools, ExpertItem, Prompts
 from shared.llms.openai import GPT_3_5_TURBO
 
@@ -30,7 +31,10 @@ THINKER_EXPERT = ExpertItem(
     model=GPT_3_5_TURBO,
     temperature=1,
     prompts=Prompts(
-        system="I am a helpful AI assistant for other AIs."
+        system="I am a helpful AI assistant for other AIs. "
+        "I am the first tool in any chain to decide what to do with the question of the user, "
+        "even before any memory tool."
+        "I am able to decide what tool to use to answer the question so the chain can be simple and avoid loops. "
         "I am able to decide if the answer is good enough to be saved in the memory. "
         "I am able to decide if the answer is good enough to be show the answer to the user. "
     ),
@@ -59,6 +63,7 @@ logger = logging.getLogger(__name__)
 
 class LLMConfigBuilder:
     def __init__(self, config: Config):
+        self.module_loader = ModuleLoader()
         self.config = config
         self.llm_manager = OpenAIApiManager()
         self.expert_agent_manager = ExpertAgentManager()
@@ -77,13 +82,11 @@ class LLMConfigBuilder:
         self.experts_map = {**self.default_experts, **self.config.experts.__root__}
 
         self.custom_tools = []
-        # if self.config.my_tools:
-        #     logger.info(f"Loading custom tools from {self.config.my_tools}")
-        #     module_path = self.config.my_tools
-        #     module_name, variable_name = module_path.rsplit(".", 1)
-        #
-        #     module = importlib.import_module(module_name)
-        #     self.custom_tools = getattr(module, variable_name)
+        if self.config.custom_tools:
+            self.config.custom_tools = self.module_loader.build_module(
+                self.config.custom_tools
+            )
+            self.custom_tools = self.config.custom_tools.get_attribute_built()
 
     def get_expert_chats(self, session_id: str = "same-session"):
         chats = defaultdict()

@@ -33,7 +33,7 @@ class OpenAIApiManager(BaseLLMManager):
     def get_agent_executor(
         self,
         llm,
-        llm_key: AgentType = "zero-shot-react-description",
+        llm_key: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
     ) -> AgentExecutor:

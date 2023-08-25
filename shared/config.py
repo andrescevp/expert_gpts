@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from langchain.prompts import ChatPromptTemplate
@@ -88,6 +88,25 @@ class Chain(BaseModel):
     )
 
 
+class CustomModule(BaseModel):
+    package: str
+    attribute: str
+    execute: bool = True
+    build_attribute: Any = Field(default=None, init=False, private=True)
+
+    def get_attribute_built(self):
+        if self.build_attribute is None:
+            raise ValueError("Attribute not built")
+        return self.build_attribute
+
+    def set_attribute_built(self, value: Any):
+        self.build_attribute = value
+
+
+class CustomTools(CustomModule):
+    execute: bool = False
+
+
 class Config(BaseModel):
     experts: Experts
     chain: Chain = Chain()
@@ -108,7 +127,7 @@ class Config(BaseModel):
         ]
     )
     enable_memory_tools: bool = True
-    my_tools: Optional[str] = None
+    custom_tools: Optional[CustomTools] = None
 
 
 def load_config(path: str) -> Config:
