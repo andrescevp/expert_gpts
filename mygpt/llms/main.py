@@ -76,7 +76,7 @@ class LLMConfigBuilder:
             }
         self.experts_map = {**self.default_experts, **self.config.experts.__root__}
 
-        # self.custom_tools = []
+        self.custom_tools = []
         # if self.config.my_tools:
         #     logger.info(f"Loading custom tools from {self.config.my_tools}")
         #     module_path = self.config.my_tools
