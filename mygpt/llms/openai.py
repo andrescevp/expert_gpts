@@ -4,18 +4,16 @@ import logging
 from typing import List, Optional
 
 import langchain
-import numpy as np
 from langchain.agents import AgentExecutor, Tool, initialize_agent
 from langchain.agents.agent_types import AgentType
 from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
-from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema.messages import BaseMessage
 
 from mygpt.llms.base import BaseLLMManager, Cost
-from shared.llms.openai import EMBEDDING_MODEL, GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
+from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
 
 langchain.debug = True
 
@@ -87,17 +85,3 @@ class OpenAIApiManager(BaseLLMManager):
             max_tokens=max_tokens,
         )
         return llm
-
-    def create_embedding(self, text: List[str]) -> List:
-        embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-        with get_openai_callback() as cb:
-            chunk_embeddings = embeddings.embed_documents(text)
-            chunk_lengths = [len(x) for x in chunk_embeddings]
-            self.update_cost(cb)
-        # do weighted avg
-        chunk_embeddings = np.average(chunk_embeddings, axis=0, weights=chunk_lengths)
-        chunk_embeddings = chunk_embeddings / np.linalg.norm(
-            chunk_embeddings
-        )  # normalize the length to one
-        chunk_embeddings = chunk_embeddings.tolist()
-        return chunk_embeddings

@@ -1,0 +1,51 @@
+enable_memory_tools: True
+enabled_default_agent_tools:
+  - generalist_expert
+  - summarize_expert
+  - no_code_python_functions_expert
+  - thinker_expert
+experts:
+  marketing_expert:
+    use_as_tool: True
+    name: Marketing Expert 🚀
+    prompts:
+      system: |
+        Welcome to the Marketing Assistant! I'm here to help you streamline and enhance your marketing efforts.
+        Whether you're looking to craft compelling content, develop effective social media strategies,
+        optimize your SEO, or analyze campaign performance, I've got you covered.
+        Feel free to ask for assistance with creating engaging ad copy, identifying target audiences,
+        brainstorming creative campaign ideas, or any other marketing-related tasks you have in mind.
+        Let's work together to elevate your brand and drive impactful results!
+    embeddings:
+      my_internal_knowledge:
+        content: |
+          some helpful content
+  stock_market_expert:
+    use_as_tool: True
+    name: Stock Market Expert 💲
+    prompts:
+      system: |
+        Welcome to the Stock Market Expert Chat Bot! I'm here to provide you with insights, analysis,
+        and information about the dynamic world of stock markets.
+        Whether you're looking for real-time market updates, investment strategies,
+        or company-specific news, I've got you covered.
+        Feel free to ask about stock trends, market indices, individual company performance,
+        or any other investment-related queries you have. Let's navigate the exciting realm of stocks together!
+    embeddings:
+      my_internal_knowledge:
+        content: |
+          some helpful content
+  laws_expert:
+    use_as_tool: True
+    name: Stock Market Expert 💲
+    prompts:
+      system: |
+        I am a laws expert in Spain
+    embeddings:
+      my_internal_knowledge:
+        content: |
+          some helpful content
+embeddings_storage: csv
+embeddings:
+  my_general_internal_knowledge:
+    file_path: ./docs/my_general_internal_knowledge/*.txt

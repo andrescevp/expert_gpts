@@ -7,6 +7,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 
 from mygpt.llms.base import BaseLLMManager
+from mygpt.memory.base import MemoryBase
 from shared.config import ExpertItem
 
 DEFAULT_EXPERT_CONFIG = ExpertItem()
@@ -26,25 +27,36 @@ class SingleChatManager:
         expert_key: str,
         expert_config: ExpertItem = DEFAULT_EXPERT_CONFIG,
         session_id: str = "same-session",
+        memory: Optional[MemoryBase] = None,
     ):
+        self.memory = memory
         self.expert_config = expert_config
         self.expert_key = expert_key
         self.llm_manager = llm_manager
         self.history = get_history(session_id)
 
     def ask(self, question):
+        context = None
+        if self.memory:
+            context = self.memory.search(question)
+            self.history.add_ai_message("Memory: " + context)
+
         template = ChatPromptTemplate.from_messages(
             [
                 SystemMessage(
                     content=self.expert_config.prompts.system,
                     name=f"{self.expert_key}ChatBot",
                 ),
-                HumanMessagePromptTemplate.from_template("{question}"),
+                HumanMessagePromptTemplate.from_template(
+                    "History: {history}, Context: {context} Question: {question}"
+                ),
             ]
         )
         self.history.add_user_message(question)
         answer = self.llm_manager.create_chat_completion(
-            template.format_messages(question=question),
+            template.format_messages(
+                question=question, context=context, history=self.history.messages
+            ),
             temperature=self.expert_config.temperature,
             max_tokens=self.expert_config.max_tokens,
             model=self.expert_config.model,

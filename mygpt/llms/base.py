@@ -57,7 +57,7 @@ class BaseLLMManager(metaclass=Singleton):
     def create_chat_completion_with_agent(
         self,
         user_input: str,  # type: ignore
-        agent_name: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_name: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         model: str | None = None,
         temperature: float = 0,
         max_tokens: int | None = None,
@@ -73,7 +73,7 @@ class BaseLLMManager(metaclass=Singleton):
     def get_agent_executor(
         self,
         llm,
-        llm_key: AgentType = "conversational-react-description",
+        llm_key: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
     ) -> AgentExecutor:
@@ -93,6 +93,3 @@ class BaseLLMManager(metaclass=Singleton):
         self.total_completion_tokens += cb.prompt_tokens
         self.total_cost += cb.total_cost
         logger.debug(f"Total running cost: ${self.total_cost:.3f}")
-
-    def create_embedding(self, text: List[str]) -> List:
-        pass

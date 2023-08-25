@@ -27,15 +27,18 @@ class DefaultAgentTools(Enum):
 
 class EmbeddingItem(BaseModel):
     content: Optional[str] = None
-    file_path: Optional[str] = None
+    folder_path: Optional[str] = None
 
 
 class Prompts(BaseModel):
     system: str
 
 
+EMBEDDINGS_TYPE = Dict[str, Optional[EmbeddingItem]]
+
+
 class Embeddings(BaseModel):
-    __root__: Dict[str, Optional[EmbeddingItem]]
+    __root__: EMBEDDINGS_TYPE
 
 
 class ExpertItem(BaseModel):
@@ -67,20 +70,26 @@ class ExpertItem(BaseModel):
         return template.format_messages(text=text)
 
 
+EXPERT_TYPE = Dict[str, Optional[ExpertItem]]
+
+
 class Experts(BaseModel):
-    __root__: Dict[str, Optional[ExpertItem]]
+    __root__: EXPERT_TYPE
 
 
 class Chain(BaseModel):
     temperature: float = 0
     max_tokens: Optional[int] = None
     model: str = GPT_3_5_TURBO
+    embeddings: Embeddings = Field(
+        default=Embeddings(
+            __root__=dict(default=EmbeddingItem(content="just a placeholder"))
+        )
+    )
 
 
 class Config(BaseModel):
     experts: Experts
-    embeddings_storage: EmbeddingStorageEnum
-    embeddings: Embeddings
     chain: Chain = Chain()
     enabled_default_agent_tools: List[DefaultAgentTools] = Field(
         default_factory=lambda: [
@@ -99,6 +108,7 @@ class Config(BaseModel):
         ]
     )
     enable_memory_tools: bool = True
+    my_tools: Optional[str] = None
 
 
 def load_config(path: str) -> Config:
