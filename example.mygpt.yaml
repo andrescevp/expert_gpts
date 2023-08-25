@@ -1,3 +1,16 @@
+#custom_tools:
+#  package: my_code.my_tools
+#  attribute: TOOLS
+chain:
+  temperature: 0.7
+  max_tokens: ~
+  model: gpt-3.5-turbo
+  embeddings:
+    my_general_internal_knowledge:
+      folder_path: ./documents
+    some_test:
+      content: |
+        Joe Black is a fictional character from the 1998 American fantasy drama film Meet Joe Black.
 enable_memory_tools: True
 enabled_default_agent_tools:
   - generalist_expert
@@ -34,18 +47,15 @@ experts:
     embeddings:
       my_internal_knowledge:
         content: |
-          some helpful content
-  laws_expert:
+          This is just a test document
+  surveys_expert:
     use_as_tool: True
-    name: Stock Market Expert 💲
+    name: Surveys Expert 💲
     prompts:
       system: |
-        I am a laws expert in Spain
+        I am an expert thinking the best surveys for the provided topic.
+        I am able to provide insights about how the UI should looks for the survey.
     embeddings:
       my_internal_knowledge:
         content: |
-          some helpful content
-embeddings_storage: csv
-embeddings:
-  my_general_internal_knowledge:
-    file_path: ./docs/my_general_internal_knowledge/*.txt
+          This is just a test document
