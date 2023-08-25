@@ -1,10 +1,11 @@
-import os
+import logging
 from collections import defaultdict
 
 from mygpt.llms.chat_managers import ChainChatManager, SingleChatManager
 from mygpt.llms.expert_agents import ExpertAgentManager
 from mygpt.llms.openai import OpenAIApiManager
-from mygpt.memory.llamaindex import LlamaIndexMemory
+from mygpt.memory.factory import MemoryFactory
+from mygpt.toolkit.modules import ModuleLoader
 from shared.config import Config, DefaultAgentTools, ExpertItem, Prompts
 from shared.llms.openai import GPT_3_5_TURBO
 
@@ -30,7 +31,10 @@ THINKER_EXPERT = ExpertItem(
     model=GPT_3_5_TURBO,
     temperature=1,
     prompts=Prompts(
-        system="I am a helpful AI assistant for other AIs."
+        system="I am a helpful AI assistant for other AIs. "
+        "I am the first tool in any chain to decide what to do with the question of the user, "
+        "even before any memory tool."
+        "I am able to decide what tool to use to answer the question so the chain can be simple and avoid loops. "
         "I am able to decide if the answer is good enough to be saved in the memory. "
         "I am able to decide if the answer is good enough to be show the answer to the user. "
     ),
@@ -54,8 +58,12 @@ BASE_EXPERTS = {
 }
 
 
+logger = logging.getLogger(__name__)
+
+
 class LLMConfigBuilder:
     def __init__(self, config: Config):
+        self.module_loader = ModuleLoader()
         self.config = config
         self.llm_manager = OpenAIApiManager()
         self.expert_agent_manager = ExpertAgentManager()
@@ -73,6 +81,13 @@ class LLMConfigBuilder:
             }
         self.experts_map = {**self.default_experts, **self.config.experts.__root__}
 
+        self.custom_tools = []
+        if self.config.custom_tools:
+            self.config.custom_tools = self.module_loader.build_module(
+                self.config.custom_tools
+            )
+            self.custom_tools = self.config.custom_tools.get_attribute_built()
+
     def get_expert_chats(self, session_id: str = "same-session"):
         chats = defaultdict()
         for expert_key, expert_config in self.experts_map.items():
@@ -81,6 +96,9 @@ class LLMConfigBuilder:
                 expert_key,
                 expert_config=expert_config,
                 session_id=session_id,
+                memory=MemoryFactory().get_expert_embeddings_memory(
+                    self.llm_manager, expert_key, expert_config.embeddings.__root__
+                ),
             )
 
         return chats
@@ -93,6 +111,9 @@ class LLMConfigBuilder:
                     expert_key,
                     expert_config=expert_config,
                     session_id=session_id,
+                    memory=MemoryFactory().get_expert_embeddings_memory(
+                        self.llm_manager, expert_key, expert_config.embeddings.__root__
+                    ),
                 )
 
         raise Exception(f"Expert {expert_key} not found")
@@ -107,18 +128,40 @@ class LLMConfigBuilder:
     def get_chain_chat(self, session_id: str = "same-session"):
         memory_tools = []
         if self.config.enable_memory_tools:
-            memory_tools = LlamaIndexMemory(
-                self.llm_manager,
-                f"{os.getcwd()}/documents",
-                index_name="chain_memory",
-                index_prefix=f"{session_id}_cm_",
-            ).get_agent_tools()
+            memory_tools = (
+                MemoryFactory()
+                .get_chain_embeddings_memory(
+                    self.llm_manager,
+                    self.config.chain.embeddings.__root__
+                    if self.config.chain.embeddings
+                    else None,
+                )
+                .get_agent_tools()
+            )
 
         return ChainChatManager(
             self.llm_manager,
             temperature=self.config.chain.temperature,
             max_tokens=self.config.chain.max_tokens,
-            tools=memory_tools + self.get_expert_tools(),
+            tools=memory_tools + self.get_expert_tools() + self.custom_tools,
             model=self.config.chain.model,
             session_id=session_id,
         )
+
+    def load_docs(self):
+        # main chain memory load
+        MemoryFactory().get_chain_embeddings_memory(
+            self.llm_manager,
+            self.config.chain.embeddings.__root__
+            if self.config.chain.embeddings
+            else None,
+            load_docs=True,
+        )
+
+        for dict_expert_key, expert_config in self.config.experts.__root__.items():
+            MemoryFactory().get_expert_embeddings_memory(
+                self.llm_manager,
+                dict_expert_key,
+                expert_config.embeddings.__root__,
+                load_docs=True,
+            )

@@ -12,3 +12,4 @@ nltk==3.8.1
 psycopg==3.1.10
 SQLAlchemy==2.0.20
 psycopg2==2.9.7
+click==8.1.7
