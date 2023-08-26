@@ -1,7 +1,7 @@
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from mygpt.database import Base
+from expert_gpts.database import Base
 
 
 class ExpertAgentToolPrompt(Base):

@@ -78,6 +78,7 @@ class Experts(BaseModel):
 
 
 class Chain(BaseModel):
+    chain_key: str = "default"
     temperature: float = 0
     max_tokens: Optional[int] = None
     model: str = GPT_3_5_TURBO
@@ -128,6 +129,13 @@ class Config(BaseModel):
     )
     enable_memory_tools: bool = True
     custom_tools: Optional[CustomTools] = None
+
+
+class UIConfig(BaseModel):
+    config: Config
+    file_name: str
+    key: str
+    file_path: str
 
 
 def load_config(path: str) -> Config:

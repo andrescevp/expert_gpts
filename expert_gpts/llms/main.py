@@ -1,11 +1,11 @@
 import logging
 from collections import defaultdict
 
-from mygpt.llms.chat_managers import ChainChatManager, SingleChatManager
-from mygpt.llms.expert_agents import ExpertAgentManager
-from mygpt.llms.openai import OpenAIApiManager
-from mygpt.memory.factory import MemoryFactory
-from mygpt.toolkit.modules import ModuleLoader
+from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
+from expert_gpts.llms.expert_agents import ExpertAgentManager
+from expert_gpts.llms.openai import OpenAIApiManager
+from expert_gpts.memory.factory import MemoryFactory
+from expert_gpts.toolkit.modules import ModuleLoader
 from shared.config import Config, DefaultAgentTools, ExpertItem, Prompts
 from shared.llms.openai import GPT_3_5_TURBO
 
@@ -118,12 +118,14 @@ class LLMConfigBuilder:
 
         raise Exception(f"Expert {expert_key} not found")
 
-    def get_expert_tools(self):
+    def get_expert_tools(self, prefix: str = ""):
         experts_as_tools = {
             **{k: v for k, v in self.default_tools.items() if v.use_as_tool},
             **{k: v for k, v in self.config.experts.__root__.items() if v.use_as_tool},
         }
-        return self.expert_agent_manager.get_experts_as_agent_tools(experts_as_tools)
+        return self.expert_agent_manager.get_experts_as_agent_tools(
+            experts_as_tools, prefix
+        )
 
     def get_chain_chat(self, session_id: str = "same-session"):
         memory_tools = []
@@ -143,7 +145,9 @@ class LLMConfigBuilder:
             self.llm_manager,
             temperature=self.config.chain.temperature,
             max_tokens=self.config.chain.max_tokens,
-            tools=memory_tools + self.get_expert_tools() + self.custom_tools,
+            tools=memory_tools
+            + self.get_expert_tools(prefix=self.config.chain.chain_key)
+            + self.custom_tools,
             model=self.config.chain.model,
             session_id=session_id,
         )

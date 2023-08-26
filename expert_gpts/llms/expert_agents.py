@@ -7,16 +7,16 @@ from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
-from mygpt.database import get_db_session
-from mygpt.database.expert_agents import ExpertAgentToolPrompt
-from mygpt.llms.openai import OpenAIApiManager
+from expert_gpts.database import get_db_session
+from expert_gpts.database.expert_agents import ExpertAgentToolPrompt
+from expert_gpts.llms.openai import OpenAIApiManager
 from shared.config import ExpertItem
 from shared.llms.openai import GPT_3_5_TURBO
 from shared.patterns import Singleton
 
 AGENT_TOOL_GENERATOR_MODEL = GPT_3_5_TURBO
 MAX_TOKENS = 1000
-TEMPERATURE = 0.1
+TEMPERATURE = 1
 logger = logging.getLogger(__name__)
 api = OpenAIApiManager()
 
@@ -27,10 +27,13 @@ class ExpertAgentManager(metaclass=Singleton):
             SystemMessage(
                 content="AI Tool Description Generator: I specialize in interpreting System AI prompts "
                 "and crafting precise tool descriptions for other AI systems. These descriptions "
-                "provide insights into the intended usage of the described AI. The format I "
+                "provide insights into the intended usage of the described AI to be "
+                "understandable by other AIs. "
+                "The format I "
                 "adhere to is: 'useful for ... [tool description]. "
-                "Input should be a complete English sentence. "
-                "This tool must be used only if the input falls into the described functionality.'",
+                "This tool must be used only if the input falls into the described functionality.'"
+                "Input should be a complete sentence. "
+                "I never answer questions outside of my expertise.",
                 name="AgentToolCreator",
             ),
             HumanMessagePromptTemplate.from_template(
@@ -49,7 +52,8 @@ class ExpertAgentManager(metaclass=Singleton):
                 "goals. Share your objectives and the context of your task, and I'll ensure that "
                 "the answer I provide is the optimized prompt that generates the desired "
                 "outcomes. Let's collaborate to create prompts that empower our AI models to "
-                "deliver exceptional performance.",
+                "deliver exceptional performance. I never answer questions outside of my "
+                "expertise.",
                 name="PromptExpertMyGpt",
             ),
             HumanMessagePromptTemplate.from_template(
@@ -59,32 +63,29 @@ class ExpertAgentManager(metaclass=Singleton):
     )
 
     def get_experts_as_agent_tools(
-        self, experts_config: Dict[str, Optional[ExpertItem]]
+        self, experts_config: Dict[str, Optional[ExpertItem]], key_prefix: str = ""
     ) -> List[Tool]:
         tools = []
         with get_db_session() as session:
             for expert_key, expert in experts_config.items():
-                logger.debug(f"Creating agent tool for {expert_key}")
+                expert_key_with_prefix = f"{key_prefix}:{expert_key}"
+                logger.debug(f"Creating agent tool for {expert_key_with_prefix}")
                 stmt_expert = select(ExpertAgentToolPrompt).where(
-                    ExpertAgentToolPrompt.expert_agent_key == expert_key
+                    ExpertAgentToolPrompt.expert_agent_key == expert_key_with_prefix
                 )
                 try:
                     expert_model = session.scalars(stmt_expert).one()
                 except NoResultFound:
-                    agent_tool_description = api.create_chat_completion(
-                        self.tool_generator_prompt.format_messages(
-                            text=expert.prompts.system
-                        ),
-                        model=AGENT_TOOL_GENERATOR_MODEL,
-                        max_tokens=MAX_TOKENS,
-                        temperature=TEMPERATURE,
+                    expert_prompt_to_transform = expert.prompts.system
+                    agent_tool_description = self.get_langchain_tools_expert_completion(
+                        expert_prompt_to_transform
                     )
                     expert_model = ExpertAgentToolPrompt()
                     expert_model.expert_agent_tool_prompt = agent_tool_description
-                    expert_model.expert_agent_key = expert_key
+                    expert_model.expert_agent_key = expert_key_with_prefix
                     session.add(expert_model)
                     logger.debug(
-                        f"Created agent tool for {expert_key} with description: "
+                        f"Created agent tool for {expert_key_with_prefix} with description: "
                         f"{expert_model.expert_agent_tool_prompt}"
                     )
 
@@ -104,6 +105,15 @@ class ExpertAgentManager(metaclass=Singleton):
 
             session.commit()
         return tools
+
+    def get_langchain_tools_expert_completion(self, expert_prompt_to_transform):
+        agent_tool_description = api.create_chat_completion(
+            self.tool_generator_prompt.format_messages(text=expert_prompt_to_transform),
+            model=AGENT_TOOL_GENERATOR_MODEL,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        )
+        return agent_tool_description
 
     def optimize_prompt(self, prompt: str) -> str:
         logger.debug(f"Optimizing prompt: {prompt}")
