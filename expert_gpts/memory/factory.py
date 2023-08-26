@@ -1,5 +1,5 @@
-from mygpt.llms.base import BaseLLMManager
-from mygpt.memory.llamaindex import LlamaIndexMemory
+from expert_gpts.llms.base import BaseLLMManager
+from expert_gpts.memory.llamaindex import LlamaIndexMemory
 from shared.config import EMBEDDINGS_TYPE
 from shared.patterns import Singleton
 

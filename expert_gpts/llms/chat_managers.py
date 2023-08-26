@@ -6,8 +6,8 @@ from langchain.memory import PostgresChatMessageHistory
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 
-from mygpt.llms.base import BaseLLMManager
-from mygpt.memory.base import MemoryBase
+from expert_gpts.llms.base import BaseLLMManager
+from expert_gpts.memory.base import MemoryBase
 from shared.config import ExpertItem
 
 DEFAULT_EXPERT_CONFIG = ExpertItem()

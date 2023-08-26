@@ -162,10 +162,12 @@ cython_debug/
 .env
 venv
 memory_data
-mygpt.yaml
+configs/mygpt.yaml
 redis_data
 documents
 postgres_data
 my_code/*
 !my_code/.gitkeep
 storage
+configs/*
+!configs/.gitkeep

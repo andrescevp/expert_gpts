@@ -12,7 +12,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema.messages import BaseMessage
 
-from mygpt.llms.base import BaseLLMManager, Cost
+from expert_gpts.llms.base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
 
 langchain.debug = True
