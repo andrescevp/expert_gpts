@@ -29,6 +29,7 @@ pip install -r requirements.txt
 
 ```bash
 docker-compose up -d
+python -m bin.load_docs configs/mygpt.yaml # load embeddings for a specific config
 python -m ui.app
 ```
 
