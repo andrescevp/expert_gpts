@@ -19,9 +19,9 @@ from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.storage.storage_context import StorageContext
 from llama_index.vector_stores import RedisVectorStore
 
-from expert_gpts.llms.base import BaseLLMManager
 from expert_gpts.memory.base import MemoryBase
 from shared.config import EMBEDDINGS_TYPE
+from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,9 @@ useful to save relevant information about a question or information you believe 
 relevant and will be useful to know and understand to reach your goals,
 this tool should be used always to store relevant information and be able to
 query the history of the conversation. Input should be a string.
+This tool must be called only if the user specify at the beginning of the question
+"Save in your memory:" This tool must not be called under any other circumstances.
+For example:  "Save in your memory: important content"
     """
 
     def __init__(
@@ -129,7 +132,7 @@ query the history of the conversation. Input should be a string.
             self.index.insert(document)
 
     def get_agent_tools(
-        self, with_save: bool = False, tool_key: str = "default"
+        self, with_save: bool = True, tool_key: str = "default"
     ) -> List[Tool]:
         get_memories = Tool(
             name=f"{tool_key}_get_memories",

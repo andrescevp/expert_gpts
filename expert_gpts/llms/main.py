@@ -3,60 +3,11 @@ from collections import defaultdict
 
 from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
 from expert_gpts.llms.expert_agents import ExpertAgentManager
-from expert_gpts.llms.openai import OpenAIApiManager
+from expert_gpts.llms.providers.openai import OpenAIApiManager
 from expert_gpts.memory.factory import MemoryFactory
 from expert_gpts.toolkit.modules import ModuleLoader
-from shared.config import Config, DefaultAgentTools, ExpertItem, Prompts
-from shared.llms.openai import GPT_3_5_TURBO
-
-GENERAL_EXPERT = ExpertItem(
-    model=GPT_3_5_TURBO,
-    temperature=1,
-    prompts=Prompts(
-        system="I'm a helpful AI assistant for other AIs I can help in everything else other AIs tools can "
-        "not do "
-        "with "
-        "tools available."
-    ),
-)
-NO_CODE_FUNCTIONS = ExpertItem(
-    model=GPT_3_5_TURBO,
-    temperature=1,
-    prompts=Prompts(
-        system="I am a helpful AI assistant for other AIs. I am able to translate the input in to a python "
-        "function magically and return the expected result."
-    ),
-)
-THINKER_EXPERT = ExpertItem(
-    model=GPT_3_5_TURBO,
-    temperature=1,
-    prompts=Prompts(
-        system="I am a helpful AI assistant for other AIs. "
-        "I am the first tool in any chain to decide what to do with the question of the user, "
-        "even before any memory tool."
-        "I am able to decide what tool to use to answer the question so the chain can be simple and avoid loops. "
-        "I am able to decide if the answer is good enough to be saved in the memory. "
-        "I am able to decide if the answer is good enough to be show the answer to the user. "
-    ),
-)
-SUMMARIZER_EXPERT = ExpertItem(
-    model=GPT_3_5_TURBO,
-    temperature=1,
-    prompts=Prompts(
-        system="I am a helpful AI assistant for other AIs. I am the last tool in any chain to summarize the "
-        "answer to max 1000 tokens. I am also the tool used before save any memory. I am able to "
-        "validate the length of the answer using internally "
-        "the tokenization of the model."
-    ),
-)
-
-BASE_EXPERTS = {
-    DefaultAgentTools.GENERALIST_EXPERT.value: GENERAL_EXPERT,
-    DefaultAgentTools.NO_CODE_PYTHON_FUNCTIONS_EXPERT.value: NO_CODE_FUNCTIONS,
-    DefaultAgentTools.THINKER_EXPERT.value: THINKER_EXPERT,
-    DefaultAgentTools.SUMMARIZER_EXPERT.value: SUMMARIZER_EXPERT,
-}
-
+from shared.config import Config
+from shared.llms.system_prompts import BASE_EXPERTS
 
 logger = logging.getLogger(__name__)
 
@@ -134,11 +85,14 @@ class LLMConfigBuilder:
                 MemoryFactory()
                 .get_chain_embeddings_memory(
                     self.llm_manager,
-                    self.config.chain.embeddings.__root__
+                    embeddings=self.config.chain.embeddings.__root__
                     if self.config.chain.embeddings
                     else None,
+                    load_docs=False,
+                    index_name=self.config.chain.chain_key,
+                    index_prefix=f"{self.config.chain.chain_key}_",
                 )
-                .get_agent_tools()
+                .get_agent_tools(tool_key=self.config.chain.chain_key)
             )
 
         return ChainChatManager(
@@ -150,6 +104,17 @@ class LLMConfigBuilder:
             + self.custom_tools,
             model=self.config.chain.model,
             session_id=session_id,
+            memory=None
+            if not self.config.enable_memory_tools
+            else MemoryFactory().get_chain_embeddings_memory(
+                self.llm_manager,
+                embeddings=self.config.chain.embeddings.__root__
+                if self.config.chain.embeddings
+                else None,
+                load_docs=False,
+                index_name=self.config.chain.chain_key,
+                index_prefix=f"{self.config.chain.chain_key}_",
+            ),
         )
 
     def load_docs(self):
@@ -160,6 +125,8 @@ class LLMConfigBuilder:
             if self.config.chain.embeddings
             else None,
             load_docs=True,
+            index_name=self.config.chain.chain_key,
+            index_prefix=f"{self.config.chain.chain_key}_",
         )
 
         for dict_expert_key, expert_config in self.config.experts.__root__.items():

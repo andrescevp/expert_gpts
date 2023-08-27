@@ -12,7 +12,7 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.schema.messages import BaseMessage
 
-from expert_gpts.llms.base import BaseLLMManager, Cost
+from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
 
 langchain.debug = True
@@ -33,16 +33,18 @@ class OpenAIApiManager(BaseLLMManager):
     def get_agent_executor(
         self,
         llm,
-        llm_key: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
     ) -> AgentExecutor:
         return initialize_agent(
             tools=tools,
             llm=llm,
-            agent=llm_key,
+            agent=agent_type,
             memory=memory,
-            handle_parsing_errors="Check your output and make sure it conforms!",
+            handle_parsing_errors="""
+Check your output and make sure it conforms format!
+            """,
         )
 
     def create_chat_completion(
@@ -63,18 +65,17 @@ class OpenAIApiManager(BaseLLMManager):
     def create_chat_completion_with_agent(
         self,
         user_input: str,  # type: ignore
-        agent_name: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         model: str | None = GPT_3_5_TURBO,
         temperature: float = 0,
         max_tokens: int | None = None,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
-        history: Optional[List[BaseMessage]] = None,
     ) -> str:
         llm = self.get_llm(max_tokens, model, temperature)
-        agent = self.get_agent_executor(llm, agent_name, memory, tools)
+        agent = self.get_agent_executor(llm, agent_type, memory, tools)
         with get_openai_callback() as cb:
-            response = agent.run(input=user_input, chat_history=history)
+            response = agent.run(input=user_input)
         self.update_cost(cb)
         return response
 

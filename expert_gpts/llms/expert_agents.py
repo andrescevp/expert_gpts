@@ -3,15 +3,20 @@ from typing import Dict, List, Optional
 
 from langchain.agents import Tool
 from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 from expert_gpts.database import get_db_session
 from expert_gpts.database.expert_agents import ExpertAgentToolPrompt
-from expert_gpts.llms.openai import OpenAIApiManager
+from expert_gpts.llms.providers.openai import OpenAIApiManager
 from shared.config import ExpertItem
 from shared.llms.openai import GPT_3_5_TURBO
+from shared.llms.system_prompts import (
+    prompt_engineer_human_prompt,
+    prompt_engineer_system_prompt,
+    prompt_tool_expert_human_prompt,
+    prompt_tool_expert_system_prompt,
+)
 from shared.patterns import Singleton
 
 AGENT_TOOL_GENERATOR_MODEL = GPT_3_5_TURBO
@@ -24,41 +29,15 @@ api = OpenAIApiManager()
 class ExpertAgentManager(metaclass=Singleton):
     tool_generator_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(
-                content="AI Tool Description Generator: I specialize in interpreting System AI prompts "
-                "and crafting precise tool descriptions for other AI systems. These descriptions "
-                "provide insights into the intended usage of the described AI to be "
-                "understandable by other AIs. "
-                "The format I "
-                "adhere to is: 'useful for ... [tool description]. "
-                "This tool must be used only if the input falls into the described functionality.'"
-                "Input should be a complete sentence. "
-                "I never answer questions outside of my expertise.",
-                name="AgentToolCreator",
-            ),
-            HumanMessagePromptTemplate.from_template(
-                "Please, generate a tool description from this AI System Prompt: {text}"
-            ),
+            prompt_tool_expert_system_prompt,
+            prompt_tool_expert_human_prompt,
         ]
     )
 
     system_prompt_expert_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(
-                content="Prompt Optimization Guidance: In my role as a Senior Prompt Engineer at OpenAI, "
-                "I'm here to provide expert assistance in optimizing prompts for superior "
-                "results. I specialize in refining prompts to achieve the utmost accuracy and "
-                "relevance. I'll offer you optimized prompt suggestions that align with your "
-                "goals. Share your objectives and the context of your task, and I'll ensure that "
-                "the answer I provide is the optimized prompt that generates the desired "
-                "outcomes. Let's collaborate to create prompts that empower our AI models to "
-                "deliver exceptional performance. I never answer questions outside of my "
-                "expertise.",
-                name="PromptExpertMyGpt",
-            ),
-            HumanMessagePromptTemplate.from_template(
-                "Please, optimize this SYSTEM prompt: {text}"
-            ),
+            prompt_engineer_system_prompt,
+            prompt_engineer_human_prompt,
         ]
     )
 

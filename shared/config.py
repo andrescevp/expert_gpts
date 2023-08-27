@@ -7,7 +7,7 @@ from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 from langchain.schema.messages import BaseMessage
 from pydantic import BaseModel, Field
 
-from shared.llms.openai import GPT_3_5_TURBO
+from shared.llms.openai import GPT_4
 
 
 class MemoryTypeEnum(Enum):
@@ -43,7 +43,7 @@ class Embeddings(BaseModel):
 
 class ExpertItem(BaseModel):
     name: str = "default"
-    model: str = GPT_3_5_TURBO
+    model: str = GPT_4
     temperature: float = 0
     max_tokens: Optional[int] = None
     prompts: Optional[Prompts] = Field(
@@ -52,7 +52,7 @@ class ExpertItem(BaseModel):
     embeddings: Optional[Embeddings] = None
     use_as_tool: bool = True
     max_tokes_as_tool: int = 200
-    model_as_tool: str = GPT_3_5_TURBO
+    model_as_tool: str = GPT_4
     temperature_as_tool: float = 0.5
     tool_return_direct: bool = False
 
@@ -61,9 +61,10 @@ class ExpertItem(BaseModel):
             [
                 SystemMessage(
                     content=self.prompts.system,
-                    name=f"{self.name} MyGPT",
+                    name=f"{self.name}ExpertGPT",
+                    role="system",
                 ),
-                HumanMessagePromptTemplate.from_template("{text}"),
+                HumanMessagePromptTemplate.from_template("{text}", role="user"),
             ]
         )
 
@@ -81,7 +82,7 @@ class Chain(BaseModel):
     chain_key: str = "default"
     temperature: float = 0
     max_tokens: Optional[int] = None
-    model: str = GPT_3_5_TURBO
+    model: str = GPT_4
     embeddings: Embeddings = Field(
         default=Embeddings(
             __root__=dict(default=EmbeddingItem(content="just a placeholder"))

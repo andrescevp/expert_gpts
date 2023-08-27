@@ -8,7 +8,6 @@ from langchain.agents import AgentExecutor, Tool
 from langchain.agents.agent_types import AgentType
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.schema.messages import BaseMessage
 
 from shared.patterns import Singleton
 
@@ -57,13 +56,12 @@ class BaseLLMManager(metaclass=Singleton):
     def create_chat_completion_with_agent(
         self,
         user_input: str,  # type: ignore
-        agent_name: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         model: str | None = None,
         temperature: float = 0,
         max_tokens: int | None = None,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
-        history: Optional[List[BaseMessage]] = None,
     ) -> str:
         pass
 
