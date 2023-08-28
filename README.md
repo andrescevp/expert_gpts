@@ -2,6 +2,10 @@
 
 This is a framework to configure LangChain GPTs for different tasks driven by a simple config file.
 
+# DISCLAIMER: This repo is WIP and can change drastically in the future.
+
+## Looking collaborators to improve it!
+
 ## Installation
 
 1. Create configs files and edit them.
@@ -112,3 +116,11 @@ custom_tools:
   package: my_code.my_tools
   attribute: TOOLS
 ```
+
+### Tweaking experts and tools
+
+```bash
+cp ./shared/experts_gpt.yaml ./my_code/experts_gpt.yaml
+```
+
+You copy the prompts file and point `PROMPTS_FILE_PATH` env to your new file.

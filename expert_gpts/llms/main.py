@@ -79,20 +79,28 @@ class LLMConfigBuilder:
         )
 
     def get_chain_chat(self, session_id: str = "same-session"):
+        chain_memory = MemoryFactory().get_chain_embeddings_memory(
+            self.llm_manager,
+            embeddings=self.config.chain.embeddings.__root__
+            if self.config.chain.embeddings
+            else None,
+            load_docs=False,
+            index_name=self.config.chain.chain_key,
+            index_prefix=f"{self.config.chain.chain_key}_",
+        )
+
         memory_tools = []
-        if self.config.enable_memory_tools:
-            memory_tools = (
-                MemoryFactory()
-                .get_chain_embeddings_memory(
-                    self.llm_manager,
-                    embeddings=self.config.chain.embeddings.__root__
-                    if self.config.chain.embeddings
-                    else None,
-                    load_docs=False,
-                    index_name=self.config.chain.chain_key,
-                    index_prefix=f"{self.config.chain.chain_key}_",
+        if self.config.chain.get_from_memory_as_tool:
+            memory_tools.append(
+                chain_memory.get_memory_tool_get_memory(
+                    tool_key=self.config.chain.chain_key
                 )
-                .get_agent_tools(tool_key=self.config.chain.chain_key)
+            )
+        if self.config.chain.save_in_memory_as_tool:
+            memory_tools.append(
+                chain_memory.get_memory_tool_save_memory(
+                    tool_key=self.config.chain.chain_key
+                )
             )
 
         return ChainChatManager(
@@ -104,17 +112,8 @@ class LLMConfigBuilder:
             + self.custom_tools,
             model=self.config.chain.model,
             session_id=session_id,
-            memory=None
-            if not self.config.enable_memory_tools
-            else MemoryFactory().get_chain_embeddings_memory(
-                self.llm_manager,
-                embeddings=self.config.chain.embeddings.__root__
-                if self.config.chain.embeddings
-                else None,
-                load_docs=False,
-                index_name=self.config.chain.chain_key,
-                index_prefix=f"{self.config.chain.chain_key}_",
-            ),
+            memory=chain_memory,
+            query_memory_before_ask=self.config.chain.query_memory_before_ask,
         )
 
     def load_docs(self):

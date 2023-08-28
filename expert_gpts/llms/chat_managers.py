@@ -5,11 +5,12 @@ from langchain.agents import Tool
 from langchain.agents.agent_types import AgentType
 from langchain.memory import PostgresChatMessageHistory
 from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
+from langchain.prompts.chat import SystemMessage
 
 from expert_gpts.memory.base import MemoryBase
 from shared.config import ExpertItem
 from shared.llm_manager_base import BaseLLMManager
+from shared.llms.system_prompts import CHAT_HUMAN_PROMPT_TEMPLATE
 
 DEFAULT_EXPERT_CONFIG = ExpertItem()
 
@@ -29,7 +30,9 @@ class SingleChatManager:
         expert_config: ExpertItem = DEFAULT_EXPERT_CONFIG,
         session_id: str = "same-session",
         memory: Optional[MemoryBase] = None,
+        query_memory_before_ask: bool = True,
     ):
+        self.query_memory_before_ask = query_memory_before_ask
         self.memory = memory
         self.expert_config = expert_config
         self.expert_key = expert_key
@@ -38,7 +41,7 @@ class SingleChatManager:
 
     def ask(self, question):
         context = None
-        if self.memory:
+        if self.memory and self.query_memory_before_ask:
             context = self.memory.search(question)
             self.history.add_ai_message("Memory: " + context.response)
 
@@ -49,15 +52,7 @@ class SingleChatManager:
                     name=f"{self.expert_key}ChatBot",
                     role="system",
                 ),
-                HumanMessagePromptTemplate.from_template(
-                    """
-                        Use the History and Context to look for relevant information about the Question.
-                        History: {history}
-                        Context: {context}
-                        Question: {question}
-                        """,
-                    role="user",
-                ),
+                CHAT_HUMAN_PROMPT_TEMPLATE,
             ]
         )
         self.history.add_user_message(question)
@@ -87,7 +82,9 @@ class ChainChatManager:
         session_id: str = "same-session",
         agent_type: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         memory: Optional[MemoryBase] = None,
+        query_memory_before_ask: bool = True,
     ):
+        self.query_memory_before_ask = query_memory_before_ask
         self.memory = memory
         self.agent_type = agent_type
         self.model = model
@@ -99,18 +96,28 @@ class ChainChatManager:
 
     def ask(self, question):
         context = None
-        if self.memory:
+        history = [x.content for x in self.history.messages][:5]
+        if self.memory and self.query_memory_before_ask:
             context = self.memory.search(question)
             self.history.add_ai_message("Memory: " + context.response)
+            context = context.response
+        template = ChatPromptTemplate.from_messages(
+            [
+                CHAT_HUMAN_PROMPT_TEMPLATE,
+            ]
+        )
         self.history.add_user_message(question)
-        user_input = f"""
-            Use the History and Context to look for relevant information about the Question.
-            History: {[x.content for x in self.history.messages][:5]}
-            Context: {context.response}
-            Question: {question}
-        """
         answer = self.llm_manager.create_chat_completion_with_agent(
-            user_input,
+            "\n".join(
+                [
+                    x.content
+                    for x in template.format_messages(
+                        question=question,
+                        context=context,
+                        history=history,
+                    )
+                ]
+            ),
             agent_type=self.agent_type,
             temperature=self.temperature,
             max_tokens=self.max_tokens,

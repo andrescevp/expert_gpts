@@ -88,6 +88,9 @@ class Chain(BaseModel):
             __root__=dict(default=EmbeddingItem(content="just a placeholder"))
         )
     )
+    get_from_memory_as_tool: bool = True
+    save_in_memory_as_tool: bool = True
+    query_memory_before_ask: bool = True
 
 
 class CustomModule(BaseModel):
@@ -128,7 +131,6 @@ class Config(BaseModel):
             DefaultAgentTools.SUMMARIZER_EXPERT,
         ]
     )
-    enable_memory_tools: bool = True
     custom_tools: Optional[CustomTools] = None
 
 

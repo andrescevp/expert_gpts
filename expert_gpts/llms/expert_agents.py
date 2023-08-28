@@ -12,10 +12,10 @@ from expert_gpts.llms.providers.openai import OpenAIApiManager
 from shared.config import ExpertItem
 from shared.llms.openai import GPT_3_5_TURBO
 from shared.llms.system_prompts import (
-    prompt_engineer_human_prompt,
-    prompt_engineer_system_prompt,
-    prompt_tool_expert_human_prompt,
-    prompt_tool_expert_system_prompt,
+    PROMPT_ENGINEER_HUMAN_PROMPT,
+    PROMPT_ENGINEER_SYSTEM_PROMPT,
+    PROMPT_TOOL_ENGINEER_HUMAN_PROMPT,
+    PROMPT_TOOL_ENGINEER_SYSTEM_PROMPT,
 )
 from shared.patterns import Singleton
 
@@ -29,15 +29,15 @@ api = OpenAIApiManager()
 class ExpertAgentManager(metaclass=Singleton):
     tool_generator_prompt = ChatPromptTemplate.from_messages(
         [
-            prompt_tool_expert_system_prompt,
-            prompt_tool_expert_human_prompt,
+            PROMPT_TOOL_ENGINEER_SYSTEM_PROMPT,
+            PROMPT_TOOL_ENGINEER_HUMAN_PROMPT,
         ]
     )
 
     system_prompt_expert_prompt = ChatPromptTemplate.from_messages(
         [
-            prompt_engineer_system_prompt,
-            prompt_engineer_human_prompt,
+            PROMPT_ENGINEER_SYSTEM_PROMPT,
+            PROMPT_ENGINEER_HUMAN_PROMPT,
         ]
     )
 

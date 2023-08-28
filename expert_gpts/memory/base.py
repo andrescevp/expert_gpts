@@ -13,5 +13,5 @@ class MemoryBase:
     def save(self, remember_this: List[str]):
         raise NotImplementedError
 
-    def get_agent_tools(self) -> List[Tool]:
+    def get_memory_tool_get_memory(self) -> List[Tool]:
         raise NotImplementedError
