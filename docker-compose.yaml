@@ -7,18 +7,6 @@ services:
     ports:
       - "6379:6379"
 
-  postgres:
-    container_name: postgres_stack
-    image: postgres:13-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data/
-
   mariadb:
     container_name: mariadb_stack
     image: mariadb:10

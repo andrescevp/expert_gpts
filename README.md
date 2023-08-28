@@ -22,10 +22,6 @@ cp .env.dist .env # edit it specially OPENAI_API_KEY
 python -m venv venv
 ./venv/bin/activate
 
-# if you have not the postgres binaries installed on your system
-# install it with your package manager
-pip install psycopg-binary
-
 pip install -r requirements.txt
 ```
 
@@ -68,7 +64,7 @@ This project uses:
 
 - RedisStack to store vector databases.
 - LLama Index to manage the vector databases.
-- Postgres to store the history.
+- MariaDB to store the history.
 - Dash from Plotly to create the UI.
 
 # Extending
