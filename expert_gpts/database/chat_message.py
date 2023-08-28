@@ -88,9 +88,10 @@ END;
         distance: int = 4,
         limit: int = 3,
     ) -> list["ChatMessage"]:
-        # create query with query builder
+        # create query with query builder - order of where very important
         # SELECT *, JSON_VALUE(message, '$.message.content') as message_2
-        # FROM `message_store` WHERE
+        # FROM `message_store` WHERE session_id = "{session_id}"
+        # AND
         # levenshtein({message}, JSON_VALUE(message, '$.message.content'))
         # BETWEEN 0 AND {distance} LIMIT {limit};
 
