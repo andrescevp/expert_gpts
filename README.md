@@ -52,11 +52,15 @@ A chain is a sequence of experts. The output of an expert is the input of the ne
 A chain have available all the experts as tools and other generic tools you can setup in the config file.
 A chain have also a memory (Embeddings) that is available only for the chain under a llama index implementation.
 
-## Memory VS History
+## Embeddings VS History
 
-Memory (Embeddings) is a vector database that is used to store the context of the question and the answer of the expert.
+Embeddings is a vector database that is used to store the context of the question and the answer of the expert.
 
 History is a database that store the question and the answer of the expert or the chain per user with a session id.
+It is implemented with MariaDB because it allows to use an implementation of fuzzy search using levenstein.
+So what the history is is a selection of messages based in the proximity of the question.
+
+@see: https://lucidar.me/en/web-dev/levenshtein-distance-in-mysql/
 
 ## Infra.
 
