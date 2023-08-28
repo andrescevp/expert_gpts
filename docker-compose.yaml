@@ -2,6 +2,7 @@ version: "3.7"
 services:
   redis:
     container_name: redis_stack
+    hostname: redis
     image: redis/redis-stack-server:latest # aws do not supports https://repost.aws/questions/QUQyrs0KQCQwuILrT_S1VInQ/redisstack-for-redissearch-functionality-on-elasticache-memorydb-or-otherwise
     ports:
       - "6379:6379"
@@ -17,3 +18,14 @@ services:
       - POSTGRES_DB=postgres
     volumes:
       - ./postgres_data:/var/lib/postgresql/data/
+
+  mariadb:
+    container_name: mariadb_stack
+    image: mariadb:10
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=experts_gpt
+    volumes:
+      - ./mariadb_data:/var/lib/mysql/

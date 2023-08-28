@@ -1,4 +1,4 @@
-from expert_gpts.memory.llamaindex import LlamaIndexEmbeddingsHandler
+from expert_gpts.embeddings.llamaindex import LlamaIndexEmbeddingsHandler
 from shared.config import EMBEDDINGS_TYPE
 from shared.llm_manager_base import BaseLLMManager
 from shared.patterns import Singleton

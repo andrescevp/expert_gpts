@@ -172,3 +172,5 @@ storage
 configs/*
 !configs/.gitkeep
 !configs/mygpt.yaml.dist
+mariadb_data
+./mariadb_data/*

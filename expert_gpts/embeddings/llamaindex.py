@@ -19,7 +19,7 @@ from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.storage.storage_context import StorageContext
 from llama_index.vector_stores import RedisVectorStore
 
-from expert_gpts.memory.base import EmbeddingsHandlerBase
+from expert_gpts.embeddings.base import EmbeddingsHandlerBase
 from shared.config import EMBEDDINGS_TYPE
 from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO

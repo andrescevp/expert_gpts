@@ -115,13 +115,8 @@ class CustomTools(CustomModule):
 class Config(BaseModel):
     experts: Experts
     chain: Chain = Chain()
-    enabled_default_agent_tools: List[DefaultAgentTools] = Field(
-        default_factory=lambda: [
-            DefaultAgentTools.GENERALIST_EXPERT,
-            DefaultAgentTools.NO_CODE_PYTHON_FUNCTIONS_EXPERT,
-            DefaultAgentTools.THINKER_EXPERT,
-            DefaultAgentTools.SUMMARIZER_EXPERT,
-        ]
+    enabled_default_agent_tools: Optional[List[DefaultAgentTools]] = Field(
+        default=None,
     )
     enabled_default_experts: List[DefaultAgentTools] = Field(
         default_factory=lambda: [

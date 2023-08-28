@@ -1,10 +1,10 @@
 import logging
 from collections import defaultdict
 
+from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
 from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
 from expert_gpts.llms.expert_agents import ExpertAgentManager
 from expert_gpts.llms.providers.openai import OpenAIApiManager
-from expert_gpts.memory.factory import EmbeddingsHandlerFactory
 from expert_gpts.toolkit.modules import ModuleLoader
 from shared.config import Config
 from shared.llms.system_prompts import BASE_EXPERTS
