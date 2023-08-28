@@ -7,7 +7,7 @@ from langchain.memory import PostgresChatMessageHistory
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import SystemMessage
 
-from expert_gpts.memory.base import MemoryBase
+from expert_gpts.memory.base import EmbeddingsHandlerBase
 from shared.config import ExpertItem
 from shared.llm_manager_base import BaseLLMManager
 from shared.llms.system_prompts import CHAT_HUMAN_PROMPT_TEMPLATE
@@ -29,11 +29,11 @@ class SingleChatManager:
         expert_key: str,
         expert_config: ExpertItem = DEFAULT_EXPERT_CONFIG,
         session_id: str = "same-session",
-        memory: Optional[MemoryBase] = None,
+        embeddings: Optional[EmbeddingsHandlerBase] = None,
         query_memory_before_ask: bool = True,
     ):
         self.query_memory_before_ask = query_memory_before_ask
-        self.memory = memory
+        self.embeddings = embeddings
         self.expert_config = expert_config
         self.expert_key = expert_key
         self.llm_manager = llm_manager
@@ -41,8 +41,8 @@ class SingleChatManager:
 
     def ask(self, question):
         context = None
-        if self.memory and self.query_memory_before_ask:
-            context = self.memory.search(question)
+        if self.embeddings and self.query_memory_before_ask:
+            context = self.embeddings.search(question)
             self.history.add_ai_message("Memory: " + context.response)
 
         template = ChatPromptTemplate.from_messages(
@@ -81,7 +81,7 @@ class ChainChatManager:
         model: str | None = None,
         session_id: str = "same-session",
         agent_type: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        memory: Optional[MemoryBase] = None,
+        memory: Optional[EmbeddingsHandlerBase] = None,
         query_memory_before_ask: bool = True,
     ):
         self.query_memory_before_ask = query_memory_before_ask

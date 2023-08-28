@@ -3,7 +3,7 @@ from typing import List
 from langchain.agents import Tool
 
 
-class MemoryBase:
+class EmbeddingsHandlerBase:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError
 

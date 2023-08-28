@@ -4,7 +4,7 @@ from collections import defaultdict
 from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
 from expert_gpts.llms.expert_agents import ExpertAgentManager
 from expert_gpts.llms.providers.openai import OpenAIApiManager
-from expert_gpts.memory.factory import MemoryFactory
+from expert_gpts.memory.factory import EmbeddingsHandlerFactory
 from expert_gpts.toolkit.modules import ModuleLoader
 from shared.config import Config
 from shared.llms.system_prompts import BASE_EXPERTS
@@ -47,7 +47,7 @@ class LLMConfigBuilder:
                 expert_key,
                 expert_config=expert_config,
                 session_id=session_id,
-                memory=MemoryFactory().get_expert_embeddings_memory(
+                embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
                     self.llm_manager, expert_key, expert_config.embeddings.__root__
                 ),
             )
@@ -62,7 +62,7 @@ class LLMConfigBuilder:
                     expert_key,
                     expert_config=expert_config,
                     session_id=session_id,
-                    memory=MemoryFactory().get_expert_embeddings_memory(
+                    embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
                         self.llm_manager, expert_key, expert_config.embeddings.__root__
                     ),
                 )
@@ -79,7 +79,7 @@ class LLMConfigBuilder:
         )
 
     def get_chain_chat(self, session_id: str = "same-session"):
-        chain_memory = MemoryFactory().get_chain_embeddings_memory(
+        chain_memory = EmbeddingsHandlerFactory().get_chain_embeddings(
             self.llm_manager,
             embeddings=self.config.chain.embeddings.__root__
             if self.config.chain.embeddings
@@ -117,8 +117,8 @@ class LLMConfigBuilder:
         )
 
     def load_docs(self):
-        # main chain memory load
-        MemoryFactory().get_chain_embeddings_memory(
+        # main chain embeddings load
+        EmbeddingsHandlerFactory().get_chain_embeddings(
             self.llm_manager,
             self.config.chain.embeddings.__root__
             if self.config.chain.embeddings
@@ -129,7 +129,7 @@ class LLMConfigBuilder:
         )
 
         for dict_expert_key, expert_config in self.config.experts.__root__.items():
-            MemoryFactory().get_expert_embeddings_memory(
+            EmbeddingsHandlerFactory().get_expert_embeddings(
                 self.llm_manager,
                 dict_expert_key,
                 expert_config.embeddings.__root__,
