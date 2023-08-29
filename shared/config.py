@@ -7,7 +7,7 @@ from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 from langchain.schema.messages import BaseMessage
 from pydantic import BaseModel, Field
 
-from shared.llms.openai import GPT_4
+from shared.llms.openai import GPT_3_5_TURBO
 
 
 class MemoryTypeEnum(Enum):
@@ -43,7 +43,7 @@ class Embeddings(BaseModel):
 
 class ExpertItem(BaseModel):
     name: str = "default"
-    model: str = GPT_4
+    model: str = GPT_3_5_TURBO
     temperature: float = 0
     max_tokens: Optional[int] = None
     prompts: Optional[Prompts] = Field(
@@ -52,9 +52,13 @@ class ExpertItem(BaseModel):
     embeddings: Optional[Embeddings] = None
     use_as_tool: bool = True
     max_tokes_as_tool: int = 200
-    model_as_tool: str = GPT_4
+    model_as_tool: str = GPT_3_5_TURBO
     temperature_as_tool: float = 0.5
     tool_return_direct: bool = False
+    query_memory_before_ask: bool = True
+    enable_history_fuzzy_search: bool = True
+    fuzzy_search_distance: int = 5
+    fuzzy_search_limit: int = 5
 
     def get_chat_messages(self, text) -> List[BaseMessage]:
         template = ChatPromptTemplate.from_messages(
@@ -82,7 +86,7 @@ class Chain(BaseModel):
     chain_key: str = "default"
     temperature: float = 0
     max_tokens: Optional[int] = None
-    model: str = GPT_4
+    model: str = GPT_3_5_TURBO
     embeddings: Embeddings = Field(
         default=Embeddings(
             __root__=dict(default=EmbeddingItem(content="just a placeholder"))
@@ -91,6 +95,9 @@ class Chain(BaseModel):
     get_from_memory_as_tool: bool = True
     save_in_memory_as_tool: bool = True
     query_memory_before_ask: bool = True
+    enable_history_fuzzy_search: bool = True
+    fuzzy_search_distance: int = 5
+    fuzzy_search_limit: int = 5
 
 
 class CustomModule(BaseModel):

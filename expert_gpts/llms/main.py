@@ -65,6 +65,10 @@ class LLMConfigBuilder:
                     embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
                         self.llm_manager, expert_key, expert_config.embeddings.__root__
                     ),
+                    query_memory_before_ask=expert_config.query_memory_before_ask,
+                    enable_history_fuzzy_search=expert_config.enable_history_fuzzy_search,
+                    fuzzy_search_distance=expert_config.fuzzy_search_distance,
+                    fuzzy_search_limit=expert_config.fuzzy_search_limit,
                 )
 
         raise Exception(f"Expert {expert_key} not found")
@@ -114,6 +118,9 @@ class LLMConfigBuilder:
             session_id=session_id,
             memory=chain_memory,
             query_memory_before_ask=self.config.chain.query_memory_before_ask,
+            enable_history_fuzzy_search=self.config.chain.enable_history_fuzzy_search,
+            fuzzy_search_distance=self.config.chain.fuzzy_search_distance,
+            fuzzy_search_limit=self.config.chain.fuzzy_search_limit,
         )
 
     def load_docs(self):

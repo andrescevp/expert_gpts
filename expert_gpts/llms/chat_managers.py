@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 
 from langchain.agents import Tool
@@ -10,9 +11,14 @@ from expert_gpts.embeddings.base import EmbeddingsHandlerBase
 from expert_gpts.memory.mysql import MysqlChatMessageHistory
 from shared.config import ExpertItem
 from shared.llm_manager_base import BaseLLMManager
-from shared.llms.system_prompts import CHAT_HUMAN_PROMPT_TEMPLATE
+from shared.llms.system_prompts import (
+    CHAT_HUMAN_PROMPT_TEMPLATE,
+    CHAT_SYSTEM_PROMPT_STANDALONE_QUESTION,
+)
 
 DEFAULT_EXPERT_CONFIG = ExpertItem()
+
+logger = logging.getLogger(__name__)
 
 
 def get_history(session_id):
@@ -28,11 +34,15 @@ class SingleChatManager:
         expert_config: ExpertItem = DEFAULT_EXPERT_CONFIG,
         session_id: str = "same-session",
         embeddings: Optional[EmbeddingsHandlerBase] = None,
+        create_standalone_question_to_search_context: bool = True,
         query_memory_before_ask: bool = True,
         enable_history_fuzzy_search: bool = True,
         fuzzy_search_distance: int = 5,
         fuzzy_search_limit: int = 5,
     ):
+        self.create_standalone_question_to_search_context = (
+            create_standalone_question_to_search_context
+        )
         self.fuzzy_search_limit = fuzzy_search_limit
         self.fuzzy_search_distance = fuzzy_search_distance
         self.enable_history_fuzzy_search = enable_history_fuzzy_search
@@ -42,12 +52,37 @@ class SingleChatManager:
         self.expert_key = expert_key
         self.llm_manager = llm_manager
         self.history = get_history(session_id)
+        self.session_id = session_id
 
     def ask(self, question):
-        context = None
+        if self.enable_history_fuzzy_search:
+            chat_history = self.history.fuzzy_search(
+                question,
+                limit=self.fuzzy_search_limit,
+                distance=self.fuzzy_search_distance,
+            )
+        else:
+            chat_history = [x.content for x in self.history.messages][:5]
+
+        search_context_question = question
+        if self.create_standalone_question_to_search_context:
+            search_context_question = get_standalone_question(
+                question,
+                self.history,
+                chat_history,
+                self.llm_manager,
+                self.expert_config.temperature,
+                self.expert_config.max_tokens,
+                self.expert_config.model,
+            )
+
+        context = ""
         if self.embeddings and self.query_memory_before_ask:
-            context = self.embeddings.search(question)
-            self.history.add_ai_message("Memory: " + context.response)
+            try:
+                context = self.embeddings.search(search_context_question).response
+                self.history.add_ai_message("Memory: " + context)
+            except Exception as e:
+                logger.error("Could not query memory: %s", e)
 
         template = ChatPromptTemplate.from_messages(
             [
@@ -60,18 +95,10 @@ class SingleChatManager:
             ]
         )
         self.history.add_user_message(question)
-        if self.enable_history_fuzzy_search:
-            chat_history = self.history.fuzzy_search(
-                question,
-                limit=self.fuzzy_search_limit,
-                distance=self.fuzzy_search_distance,
-            )
-        else:
-            chat_history = [x.content for x in self.history.messages][:5]
         answer = self.llm_manager.create_chat_completion(
             template.format_messages(
                 question=question,
-                context=context.response,
+                context=context,
                 history=chat_history,
             ),
             temperature=self.expert_config.temperature,
@@ -98,7 +125,11 @@ class ChainChatManager:
         enable_history_fuzzy_search: bool = True,
         fuzzy_search_distance: int = 5,
         fuzzy_search_limit: int = 5,
+        create_standalone_question_to_search_context: bool = True,
     ):
+        self.create_standalone_question_to_search_context = (
+            create_standalone_question_to_search_context
+        )
         self.fuzzy_search_limit = fuzzy_search_limit
         self.fuzzy_search_distance = fuzzy_search_distance
         self.enable_history_fuzzy_search = enable_history_fuzzy_search
@@ -113,21 +144,32 @@ class ChainChatManager:
         self.history = get_history(session_id)
 
     def ask(self, question):
-        context = None
         if self.enable_history_fuzzy_search:
-            # keep only alphanumeric characters
-            question_alphanumerics = "".join(
-                [x for x in question if x.isalnum() or x == " "]
-            )
             chat_history = self.history.fuzzy_search(
-                question_alphanumerics,
+                question,
                 limit=self.fuzzy_search_limit,
                 distance=self.fuzzy_search_distance,
             )
         else:
             chat_history = [x.content for x in self.history.messages][:5]
+
+        search_context_question = question
+        if self.create_standalone_question_to_search_context:
+            search_context_question = get_standalone_question(
+                question,
+                self.history,
+                chat_history,
+                self.llm_manager,
+                self.temperature,
+                self.max_tokens,
+                self.model,
+            )
+        context = ""
         if self.memory and self.query_memory_before_ask:
-            context = self.memory.search(question)
+            try:
+                context = self.memory.search(search_context_question)
+            except Exception as e:
+                logger.error("Could not query memory: %s", e)
             self.history.add_ai_message("Memory: " + context.response)
             context = context.response
         template = ChatPromptTemplate.from_messages(
@@ -156,3 +198,25 @@ class ChainChatManager:
 
         self.history.add_ai_message(answer)
         return answer
+
+
+def get_standalone_question(
+    question, history, chat_history, llm_manager, temperature, max_tokens, model
+):
+    template = ChatPromptTemplate.from_messages(
+        [
+            CHAT_SYSTEM_PROMPT_STANDALONE_QUESTION,
+            CHAT_HUMAN_PROMPT_TEMPLATE,
+        ]
+    )
+    history.add_user_message(question)
+    return llm_manager.create_chat_completion(
+        template.format_messages(
+            question=question,
+            context="",
+            history=chat_history,
+        ),
+        temperature=temperature,
+        max_tokens=max_tokens,
+        model=model,
+    )

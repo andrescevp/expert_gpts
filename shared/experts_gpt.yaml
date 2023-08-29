@@ -3,6 +3,17 @@ chat_human_prompt_template: |
   Context: {context}
   History: {history}
   Question: {question}
+chat_human_prompt_template_standalone_question: |
+  Use the History to create an standalone question.
+  History: {history}
+  Question: {question}
+standalone_question_prompt_template:
+  system:
+    content: |
+      I am a standalone question generator. My duty is to create an standalone question based in the question and the
+      history that can be used to search the context.
+    name: PromptToolsEngineerExpertGPT
+    role: system
 prompt_tool_engineer:
   system:
     content: |
@@ -74,8 +85,8 @@ summarize_expert:
     system: |
       As the ultimate AI assistant in the processing chain, my purpose is to summarize answers within a maximum of 1000
       tokens. Prior to saving any memory, I serve as a tool to confirm the answer length through internal tokenization.
-memory_tools:
-  save_memory_tool_description: |
+embedding_tools:
+  save_embedding_tool_description: |
     useful to save relevant information about a question or information you believe is
     relevant and will be useful to know and understand to reach your goals,
     this tool should be used always to store relevant information and be able to
@@ -84,7 +95,7 @@ memory_tools:
     "Save in your memory: any data" and will save only the data and not the prefix "Save in your memory:".
     This tool must not be called under any other circumstances.
     For example:  "Save in your memory: important content". The tool will save only "important content".
-  get_memory_tool_description: |
+  get_embedding_tool_description: |
     useful for remember or gather relevant information about a question,
     this tool should be used in any chain to try to get information before actually
     call other actions, this tool can be

@@ -8,6 +8,7 @@ from langchain.agents import AgentExecutor, Tool
 from langchain.agents.agent_types import AgentType
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
+from langchain.prompts import PromptTemplate
 
 from shared.patterns import Singleton
 
@@ -91,3 +92,6 @@ class BaseLLMManager(metaclass=Singleton):
         self.total_completion_tokens += cb.prompt_tokens
         self.total_cost += cb.total_cost
         logger.debug(f"Total running cost: ${self.total_cost:.3f}")
+
+    def get_prompt_template(self) -> PromptTemplate:
+        pass

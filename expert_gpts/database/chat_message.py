@@ -101,7 +101,7 @@ FROM `message_store` WHERE
 session_id = "{session_id}"
 AND
 levenshtein("{message}", JSON_VALUE(message, '$.message.content'))
-BETWEEN 0 AND {distance} LIMIT {limit};
+BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
         """
 
         query = session.execute(

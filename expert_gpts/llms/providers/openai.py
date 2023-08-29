@@ -10,10 +10,12 @@ from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
+from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
 
 from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
+from shared.llms.system_prompts import get_open_ai_prompt_template
 
 langchain.debug = True
 
@@ -86,3 +88,6 @@ Check your output and make sure it conforms format!
             max_tokens=max_tokens,
         )
         return llm
+
+    def get_prompt_template(self) -> PromptTemplate:
+        return get_open_ai_prompt_template()

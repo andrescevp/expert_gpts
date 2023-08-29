@@ -1,6 +1,7 @@
 import os
 
 import yaml
+from langchain.prompts import PromptTemplate
 from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 
 from shared.config import DefaultAgentTools, ExpertItem, Prompts
@@ -9,6 +10,22 @@ PROMPTS_FILE_PATH = os.getenv("PROMPTS_FILE_PATH", "prompts.yaml")
 
 with open(PROMPTS_FILE_PATH) as f:
     config_prompts = yaml.safe_load(f)
+
+
+open_ai_prompt_template = """
+{
+    "role": "{{ role }}",
+    "content": "{{ content }}",
+    "name": "{{ name }}",
+}
+"""
+
+
+def get_open_ai_prompt_template() -> PromptTemplate:
+    return PromptTemplate.from_template(
+        open_ai_prompt_template, template_format="jinja2"
+    )
+
 
 PROMPT_TOOL_ENGINEER_SYSTEM_PROMPT = SystemMessage(
     **config_prompts["prompt_tool_engineer"]["system"]
@@ -70,9 +87,21 @@ CHAT_HUMAN_PROMPT_TEMPLATE = HumanMessagePromptTemplate.from_template(
     config_prompts["chat_human_prompt_template"],
     role="user",
 )
+CHAT_HUMAN_PROMPT_TEMPLATE_STANDALONE_QUESTION = (
+    HumanMessagePromptTemplate.from_template(
+        config_prompts["chat_human_prompt_template_standalone_question"],
+        role="user",
+    )
+)
 
-GET_MEMORIES_TOOL_PROMPT = config_prompts["memory_tools"]["get_memory_tool_description"]
+CHAT_SYSTEM_PROMPT_STANDALONE_QUESTION = SystemMessage(
+    **config_prompts["standalone_question_prompt_template"]["system"]
+)
 
-SAVE_MEMORIES_TOOL_PROMPT = config_prompts["memory_tools"][
-    "save_memory_tool_description"
+GET_MEMORIES_TOOL_PROMPT = config_prompts["embedding_tools"][
+    "get_embedding_tool_description"
+]
+
+SAVE_MEMORIES_TOOL_PROMPT = config_prompts["embedding_tools"][
+    "save_embedding_tool_description"
 ]
