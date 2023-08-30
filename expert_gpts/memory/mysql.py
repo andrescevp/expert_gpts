@@ -65,7 +65,6 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
             items = []
             for record in messages:
                 content = json.loads(json.loads(record.message))
-                print(content, type(content))
                 items.append(
                     f"At {record.created_at}, by {content['type']}: {content['data']['content']}"
                 )
