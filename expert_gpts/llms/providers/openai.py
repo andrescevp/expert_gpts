@@ -62,8 +62,9 @@ Check your output and make sure it conforms format!
         openai_api_key=None,
     ) -> str:
         llm = self.get_llm(max_tokens, model, temperature)
+
         with get_openai_callback() as cb:
-            response = llm(messages)
+            response = llm(messages, callbacks=[self.callbacks_handler])
         self.update_cost(cb)
         return response.content
 
@@ -85,7 +86,7 @@ Check your output and make sure it conforms format!
             )
         agent = self._agents[agent_key]
         with get_openai_callback() as cb:
-            response = agent.run(input=user_input)
+            response = agent.run(input=user_input, callbacks=[self.callbacks_handler])
         self.update_cost(cb)
         return response
 

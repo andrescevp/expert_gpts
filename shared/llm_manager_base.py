@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 
 from langchain.agents import AgentExecutor, Tool
 from langchain.agents.agent_types import AgentType
+from langchain.callbacks.tracers.base import BaseTracer
+from langchain.callbacks.tracers.schemas import Run
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import PromptTemplate
@@ -21,6 +23,13 @@ class Cost:
     completion: float
 
 
+class MyTracer(BaseTracer):
+    log = {"runs": []}
+
+    def _persist_run(self, run: Run) -> None:
+        self.log["runs"].append(run.dict())
+
+
 class BaseLLMManager(metaclass=Singleton):
     def __init__(self, costs: Dict[str, Cost]):
         self.costs = costs
@@ -28,6 +37,7 @@ class BaseLLMManager(metaclass=Singleton):
         self.total_completion_tokens = 0
         self.total_cost = 0
         self.total_budget = 0
+        self.callbacks_handler = MyTracer()
 
     def reset(self):
         self.total_prompt_tokens = 0

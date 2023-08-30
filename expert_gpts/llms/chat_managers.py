@@ -153,6 +153,9 @@ class SingleChatManager(metaclass=ChatSingleton):
         self.history.add_ai_message(answer)
         return answer
 
+    def get_log(self):
+        return self.llm_manager.callbacks_handler.log
+
 
 class ChainChatManager(metaclass=ChatSingleton):
     def __init__(
@@ -271,6 +274,9 @@ class ChainChatManager(metaclass=ChatSingleton):
 
         self.history.add_ai_message(answer)
         return answer
+
+    def get_log(self):
+        return self.llm_manager.callbacks_handler.log
 
 
 def get_standalone_question(

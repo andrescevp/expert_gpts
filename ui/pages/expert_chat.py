@@ -1,4 +1,5 @@
 import datetime
+import json
 import uuid
 from dataclasses import asdict
 
@@ -78,7 +79,8 @@ def layout(config_key=None):
                             dbc.Card(
                                 children=[
                                     get_system_chat_item(
-                                        "Hello I am a super assistant! I am able to "
+                                        "Hello I am a super assistant! I am able "
+                                        "to "
                                         "connect to others experts and tools in "
                                         "this app to "
                                         "help you."
@@ -110,6 +112,19 @@ def layout(config_key=None):
                                         ],
                                         color="secondary",
                                         className="mt-2 p-2 text-end",
+                                    ),
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader("Terminal - LangChainLog"),
+                                            dbc.CardBody(
+                                                id="terminal",
+                                                style={
+                                                    "background-color": "black",
+                                                    "color": "white",
+                                                },
+                                            ),
+                                        ],
+                                        className="mt-2",
                                     ),
                                 ],
                                 className="p-2",
@@ -193,6 +208,7 @@ def add_chat_item(
     Output("user-prompt", "readonly", allow_duplicate=True),
     Output("send-button", "disabled", allow_duplicate=True),
     Output("send-button", "children", allow_duplicate=True),
+    Output("terminal", "children", allow_duplicate=True),
     Input("web-chat-page-memory", "data"),
     Input("session", "data"),
     Input("config_key", "data"),
@@ -212,9 +228,11 @@ def get_answer(data, session, config_key, chats_prevs):
             data.current_expert, f"{data.current_expert}_{session['uid']}"
         )
         answer = expert_chat.ask(data.current_user_prompt)
+        log = expert_chat.get_log()
     else:
         chain_chat = builder.get_chain_chat(session["uid"])
         answer = chain_chat.ask(data.current_user_prompt)
+        log = chain_chat.get_log()
     chats = [get_system_chat_item(answer)]
     return [
         chats_prevs + chats,
@@ -228,6 +246,10 @@ def get_answer(data, session, config_key, chats_prevs):
         False,
         False,
         "Send",
+        html.Pre(
+            json.dumps(log, indent=4, sort_keys=True, default=str),
+            style={"height": "900px", "width": "100%", "overflow": "auto"},
+        ),
     ]
 
 
