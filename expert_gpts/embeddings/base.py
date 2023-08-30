@@ -13,5 +13,5 @@ class EmbeddingsHandlerBase:
     def save(self, remember_this: List[str]):
         raise NotImplementedError
 
-    def get_memory_tool_get_memory(self) -> List[Tool]:
+    def get_embeddings_tool_get_memory(self) -> List[Tool]:
         raise NotImplementedError

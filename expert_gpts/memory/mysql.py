@@ -18,36 +18,49 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
     def __init__(
         self,
         session_id: str,
+        ai_key: str,
         session: Session,
     ):
+        self.ai_key = ai_key
         self.session = session
         self.session_id = session_id
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
+        """Retrieve all messages from db"""
         with get_db_session() as session:
-            messages = ExpertGPTsChatMessage.get_messages_by_session_id(
-                session, self.session_id
+            result = session.query(ExpertGPTsChatMessage).where(
+                ExpertGPTsChatMessage.session_id == self.session_id
             )
-            items = [record.to_json() for record in messages]
-        messages = messages_from_dict(items)
-        return messages
+            items = [json.loads(record.message) for record in result]
+            messages = messages_from_dict(items)
+            return messages
 
     def add_message(self, message: BaseMessage) -> None:
+        """Append the message to the record in db"""
         with get_db_session() as session:
-            ExpertGPTsChatMessage.add_message(
-                self.session_id, json.dumps(_message_to_dict(message)), session
+            jsonstr = json.dumps(_message_to_dict(message))
+            session.add(
+                ExpertGPTsChatMessage(
+                    session_id=self.session_id, message=jsonstr, ai_key=self.ai_key
+                )
             )
+            session.commit()
 
     def clear(self) -> None:
+        """Clear session memory from db"""
+
         with get_db_session() as session:
-            ExpertGPTsChatMessage.clear(session, self.session_id)
+            session.query(ExpertGPTsChatMessage).filter(
+                ExpertGPTsChatMessage.session_id == self.session_id
+            ).delete()
+            session.commit()
 
     def fuzzy_search(self, search: str, distance: int = 5, limit: int = 5):
         logger.info(f"Searching for {search} in {self.session_id}")
         with get_db_session() as session:
             messages = ExpertGPTsChatMessage.search_by_message(
-                self.session_id, search, session, distance, limit
+                self.ai_key, self.session_id, search, session, distance, limit
             )
             items = []
             for record in messages:

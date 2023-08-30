@@ -1,17 +1,12 @@
 chat_human_prompt_template: |
-  Use the History and Context to look for relevant information about the Question.
+  Use the Context to look for relevant information about the Question.
   Context: {context}
-  History: {history}
-  Question: {question}
-chat_human_prompt_template_standalone_question: |
-  Use the History to create an standalone question.
-  History: {history}
   Question: {question}
 standalone_question_prompt_template:
   system:
     content: |
       I am a standalone question generator. My duty is to create an standalone question based in the question and the
-      history that can be used to search the context.
+      history that can be used to search the context in a Vector Database Implemented with LlamaIndex and supported by RedisStack.
     name: PromptToolsEngineerExpertGPT
     role: system
 prompt_tool_engineer:

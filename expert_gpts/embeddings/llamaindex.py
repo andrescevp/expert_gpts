@@ -117,14 +117,14 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
         for document in documents:
             self.index.insert(document)
 
-    def get_memory_tool_get_memory(self, tool_key: str = "default") -> Tool:
+    def get_embeddings_tool_get_memory(self, tool_key: str = "default") -> Tool:
         return Tool(
             name=f"{tool_key}_get_memories",
             func=lambda q: str(self.search(q)),
             description=GET_MEMORIES_TOOL_PROMPT,
         )
 
-    def get_memory_tool_save_memory(self, tool_key: str = "default") -> Tool:
+    def get_embeddings_tool_save_memory(self, tool_key: str = "default") -> Tool:
         return Tool(
             name=f"{tool_key}_save_memory",
             func=lambda q: str(self.save([q])),

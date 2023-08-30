@@ -87,12 +87,6 @@ CHAT_HUMAN_PROMPT_TEMPLATE = HumanMessagePromptTemplate.from_template(
     config_prompts["chat_human_prompt_template"],
     role="user",
 )
-CHAT_HUMAN_PROMPT_TEMPLATE_STANDALONE_QUESTION = (
-    HumanMessagePromptTemplate.from_template(
-        config_prompts["chat_human_prompt_template_standalone_question"],
-        role="user",
-    )
-)
 
 CHAT_SYSTEM_PROMPT_STANDALONE_QUESTION = SystemMessage(
     **config_prompts["standalone_question_prompt_template"]["system"]

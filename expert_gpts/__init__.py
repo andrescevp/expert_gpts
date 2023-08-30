@@ -5,3 +5,4 @@ from expert_gpts.database.expert_agents import ExpertAgentToolPrompt
 ExpertAgentToolPrompt.metadata.create_all(engine)
 
 ChatMessage.metadata.create_all(engine)
+ChatMessage.create_levenstein(engine)

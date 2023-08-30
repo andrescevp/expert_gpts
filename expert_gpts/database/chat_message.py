@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Optional
 
 from langchain.schema.messages import BaseMessage
-from sqlalchemy import JSON, DateTime, String, text
+from sqlalchemy import JSON, DateTime, Integer, String, text
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
@@ -14,7 +15,9 @@ class ChatMessage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     created_at: Mapped[str] = mapped_column(DateTime(), default=datetime.utcnow)
     session_id: Mapped[str] = mapped_column(String(190))
+    ai_key: Mapped[str] = mapped_column(String(190))
     message: Mapped[str] = mapped_column(JSON())
+    quality: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
 
     @classmethod
     def create_levenstein(cls, engine: Engine):
@@ -82,6 +85,7 @@ END;
     @classmethod
     def search_by_message(
         cls,
+        ai_key: str,
         session_id: str,
         message: str,
         session: Session,
@@ -100,6 +104,8 @@ SELECT *, JSON_VALUE(message, '$.message.content') as message_2
 FROM `message_store` WHERE
 session_id = "{session_id}"
 AND
+ai_key = "{ai_key}"
+AND
 levenshtein("{message}", JSON_VALUE(message, '$.message.content'))
 BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
         """
@@ -111,6 +117,7 @@ BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
                     distance=distance,
                     limit=limit,
                     session_id=session_id,
+                    ai_key=ai_key,
                 )
             )
         )
@@ -130,7 +137,10 @@ BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
     def add_message(cls, session_id: str, message: str, session: Session) -> None:
         """Append the message to the record in PostgreSQL"""
         new_message = ChatMessage(
-            session_id=session_id, message=message, created_at=datetime.utcnow()
+            session_id=session_id,
+            message=message,
+            created_at=datetime.utcnow(),
+            quality=0,
         )
         session.add(new_message)
         session.commit()
@@ -141,4 +151,4 @@ BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
     ) -> list[BaseMessage]:
         """Get all messages by session_id"""
         query = session.query(ChatMessage).filter(ChatMessage.session_id == session_id)
-        return [message.message for message in query.all()]
+        return query.all()

@@ -8,6 +8,8 @@ from sqlalchemy.exc import NoResultFound
 
 from expert_gpts.database import get_db_session
 from expert_gpts.database.expert_agents import ExpertAgentToolPrompt
+from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
+from expert_gpts.llms.chat_managers import SingleChatManager
 from expert_gpts.llms.providers.openai import OpenAIApiManager
 from shared.config import ExpertItem
 from shared.llms.openai import GPT_3_5_TURBO
@@ -42,7 +44,10 @@ class ExpertAgentManager(metaclass=Singleton):
     )
 
     def get_experts_as_agent_tools(
-        self, experts_config: Dict[str, Optional[ExpertItem]], key_prefix: str = ""
+        self,
+        experts_config: Dict[str, Optional[ExpertItem]],
+        key_prefix: str = "",
+        session_id: str = "same-session",
     ) -> List[Tool]:
         tools = []
         with get_db_session() as session:
@@ -68,15 +73,26 @@ class ExpertAgentManager(metaclass=Singleton):
                         f"{expert_model.expert_agent_tool_prompt}"
                     )
 
+                chat = SingleChatManager(
+                    api,
+                    expert_key,
+                    expert_config=expert,
+                    session_id=session_id,
+                    embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
+                        api,
+                        expert_key,
+                        expert.embeddings.__root__ if expert.embeddings else {},
+                    ),
+                    query_memory_before_ask=expert.query_memory_before_ask,
+                    enable_history_fuzzy_search=expert.enable_history_fuzzy_search,
+                    fuzzy_search_distance=expert.fuzzy_search_distance,
+                    fuzzy_search_limit=expert.fuzzy_search_limit,
+                    enable_summary_memory=expert.enable_summary_memory,
+                )
                 tools.append(
                     Tool(
                         name=expert_key,
-                        func=lambda q: api.create_chat_completion(
-                            expert.get_chat_messages(q),
-                            model=expert.model_as_tool,
-                            max_tokens=expert.max_tokes_as_tool,
-                            temperature=expert.temperature_as_tool,
-                        ),
+                        func=lambda q: chat.ask(q),
                         description=expert_model.expert_agent_tool_prompt,
                         return_direct=expert.tool_return_direct,
                     )

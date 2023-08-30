@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from langchain.agents import Tool
 from langchain.agents.agent_types import AgentType
+from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import SystemMessage
 
@@ -11,6 +12,7 @@ from expert_gpts.embeddings.base import EmbeddingsHandlerBase
 from expert_gpts.memory.mysql import MysqlChatMessageHistory
 from shared.config import ExpertItem
 from shared.llm_manager_base import BaseLLMManager
+from shared.llms.openai import GPT_3_5_TURBO
 from shared.llms.system_prompts import (
     CHAT_HUMAN_PROMPT_TEMPLATE,
     CHAT_SYSTEM_PROMPT_STANDALONE_QUESTION,
@@ -21,9 +23,11 @@ DEFAULT_EXPERT_CONFIG = ExpertItem()
 logger = logging.getLogger(__name__)
 
 
-def get_history(session_id):
+def get_history(session_id, ai_key):
     with get_db_session() as session:
-        return MysqlChatMessageHistory(session_id=session_id, session=session)
+        return MysqlChatMessageHistory(
+            session_id=session_id, session=session, ai_key=ai_key
+        )
 
 
 class SingleChatManager:
@@ -39,7 +43,9 @@ class SingleChatManager:
         enable_history_fuzzy_search: bool = True,
         fuzzy_search_distance: int = 5,
         fuzzy_search_limit: int = 5,
+        enable_summary_memory: bool = False,
     ):
+        self.enable_summary_memory = enable_summary_memory
         self.create_standalone_question_to_search_context = (
             create_standalone_question_to_search_context
         )
@@ -51,8 +57,14 @@ class SingleChatManager:
         self.expert_config = expert_config
         self.expert_key = expert_key
         self.llm_manager = llm_manager
-        self.history = get_history(session_id)
+        self.history = get_history(session_id, expert_key)
         self.session_id = session_id
+        self.memory_summary = ConversationSummaryMemory.from_messages(
+            llm=self.llm_manager.get_llm(
+                temperature=0, max_tokens=None, model=GPT_3_5_TURBO
+            ),
+            chat_memory=self.history,
+        )
 
     def ask(self, question):
         if self.enable_history_fuzzy_search:
@@ -62,7 +74,12 @@ class SingleChatManager:
                 distance=self.fuzzy_search_distance,
             )
         else:
-            chat_history = [x.content for x in self.history.messages][:5]
+            chat_history = self.history.messages[:5]
+
+        if self.enable_summary_memory:
+            chat_history = self.memory_summary.predict_new_summary(
+                chat_history, self.memory_summary.buffer
+            )
 
         search_context_question = question
         if self.create_standalone_question_to_search_context:
@@ -80,9 +97,9 @@ class SingleChatManager:
         if self.embeddings and self.query_memory_before_ask:
             try:
                 context = self.embeddings.search(search_context_question).response
-                self.history.add_ai_message("Memory: " + context)
+                self.history.add_ai_message("Embeddings result: " + context)
             except Exception as e:
-                logger.error("Could not query memory: %s", e)
+                logger.error("Could not query embeddings: %s", e)
 
         template = ChatPromptTemplate.from_messages(
             [
@@ -116,17 +133,23 @@ class ChainChatManager:
         llm_manager: BaseLLMManager,
         temperature: float = 0,
         max_tokens: int | None = None,
+        chain_key: str = "default",
         tools: Optional[List[Tool]] = None,
         model: str | None = None,
         session_id: str = "same-session",
         agent_type: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        memory: Optional[EmbeddingsHandlerBase] = None,
+        embeddings: Optional[EmbeddingsHandlerBase] = None,
         query_memory_before_ask: bool = True,
         enable_history_fuzzy_search: bool = True,
         fuzzy_search_distance: int = 5,
         fuzzy_search_limit: int = 5,
         create_standalone_question_to_search_context: bool = True,
+        enable_summary_memory: bool = True,
+        enable_memory: bool = True,
     ):
+        self.enable_memory = enable_memory
+        self.enable_summary_memory = enable_summary_memory
+        self.chain_key = chain_key
         self.create_standalone_question_to_search_context = (
             create_standalone_question_to_search_context
         )
@@ -134,14 +157,28 @@ class ChainChatManager:
         self.fuzzy_search_distance = fuzzy_search_distance
         self.enable_history_fuzzy_search = enable_history_fuzzy_search
         self.query_memory_before_ask = query_memory_before_ask
-        self.memory = memory
+        self.embeddings = embeddings
         self.agent_type = agent_type
         self.model = model
         self.tools = tools
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.llm_manager = llm_manager
-        self.history = get_history(session_id)
+        self.history = get_history(session_id, self.chain_key)
+        self.session_id = session_id
+        self.memory_summary = ConversationSummaryMemory.from_messages(
+            llm=self.llm_manager.get_llm(
+                temperature=0, max_tokens=None, model=GPT_3_5_TURBO
+            ),
+            chat_memory=self.history,
+        )
+        self.memory = ConversationBufferMemory(
+            llm=self.llm_manager.get_llm(
+                temperature=0, max_tokens=None, model=GPT_3_5_TURBO
+            )
+        )
+        for x in self.history.messages:
+            self.memory.add_message(x)
 
     def ask(self, question):
         if self.enable_history_fuzzy_search:
@@ -151,7 +188,11 @@ class ChainChatManager:
                 distance=self.fuzzy_search_distance,
             )
         else:
-            chat_history = [x.content for x in self.history.messages][:5]
+            chat_history = self.history.messages[:5]
+        if self.enable_summary_memory:
+            chat_history = self.memory_summary.predict_new_summary(
+                chat_history, self.memory_summary.buffer
+            )
 
         search_context_question = question
         if self.create_standalone_question_to_search_context:
@@ -165,19 +206,22 @@ class ChainChatManager:
                 self.model,
             )
         context = ""
-        if self.memory and self.query_memory_before_ask:
+        if self.embeddings and self.query_memory_before_ask:
             try:
-                context = self.memory.search(search_context_question)
+                context = self.embeddings.search(search_context_question)
             except Exception as e:
-                logger.error("Could not query memory: %s", e)
-            self.history.add_ai_message("Memory: " + context.response)
-            context = context.response
+                logger.error("Could not query embeddings: %s", e)
+            self.history.add_ai_message("Embeddings result: " + str(context))
+
         template = ChatPromptTemplate.from_messages(
             [
                 CHAT_HUMAN_PROMPT_TEMPLATE,
             ]
         )
-        self.history.add_user_message(question)
+
+        if self.enable_summary_memory:
+            self.history.add_user_message(question)
+
         answer = self.llm_manager.create_chat_completion_with_agent(
             "\n".join(
                 [
@@ -185,7 +229,7 @@ class ChainChatManager:
                     for x in template.format_messages(
                         question=question,
                         context=context,
-                        history=chat_history,
+                        history=None,
                     )
                 ]
             ),
@@ -194,6 +238,7 @@ class ChainChatManager:
             max_tokens=self.max_tokens,
             model=self.model,
             tools=self.tools,
+            memory=self.memory if self.enable_memory else None,
         )
 
         self.history.add_ai_message(answer)

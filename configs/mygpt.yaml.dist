@@ -15,11 +15,11 @@ chain:
     some_test:
       content: |
         Joe Black is a fictional character from the 1998 American fantasy drama film Meet Joe Black.
-enabled_default_agent_tools:
-  - generalist_expert
-  - summarize_expert
-  - no_code_python_functions_expert
-  - thinker_expert
+enabled_default_agent_tools: ~
+  #- generalist_expert
+  #- summarize_expert
+  #- no_code_python_functions_expert
+  #- thinker_expert
 experts:
   python_expert:
     use_as_tool: True
