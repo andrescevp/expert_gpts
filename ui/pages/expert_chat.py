@@ -115,9 +115,33 @@ def layout(config_key=None):
                                     ),
                                     dbc.Card(
                                         [
-                                            dbc.CardHeader("Terminal - LangChainLog"),
+                                            dbc.CardHeader(
+                                                [
+                                                    "Terminal - LangChainLog",
+                                                    dbc.Button(
+                                                        "Download",
+                                                        id="download-log",
+                                                        className="float-end",
+                                                    ),
+                                                ]
+                                            ),
                                             dbc.CardBody(
-                                                id="terminal",
+                                                [
+                                                    html.Pre(
+                                                        style={
+                                                            "height": "900px",
+                                                            "width": "100%",
+                                                            "overflow": "auto",
+                                                        },
+                                                        id="terminal",
+                                                    ),
+                                                    dcc.Download(
+                                                        id="download-terminal-log"
+                                                    ),
+                                                    dcc.Store(
+                                                        id="last-log-download", data=0
+                                                    ),
+                                                ],
                                                 style={
                                                     "background-color": "black",
                                                     "color": "white",
@@ -246,10 +270,7 @@ def get_answer(data, session, config_key, chats_prevs):
         False,
         False,
         "Send",
-        html.Pre(
-            json.dumps(log, indent=4, sort_keys=True, default=str),
-            style={"height": "900px", "width": "100%", "overflow": "auto"},
-        ),
+        json.dumps(log, indent=4, sort_keys=True, default=str),
     ]
 
 
@@ -285,3 +306,25 @@ def get_expert_chat(config_key, n_clicks, value):
         last_clicked,
         config.experts.__root__[last_clicked].name or last_clicked,
     ]
+
+
+# on click download-log download the log from terminal
+@dash.callback(
+    Output("download-terminal-log", "data"),
+    Output("last-log-download", "data"),
+    Input("last-log-download", "data"),
+    Input("download-log", "n_clicks_timestamp"),
+    Input("download-log", "n_clicks"),
+    Input("terminal", "children"),
+    prevent_initial_call=True,
+)
+def download_log(last_download_at, n_clicks, n_clicks_timestamp, log):
+    if not log or not n_clicks:
+        return dash.no_update
+    if (
+        n_clicks_timestamp
+        and last_download_at
+        and int(n_clicks_timestamp) <= int(last_download_at)
+    ):
+        return dash.no_update
+    return [dict(content=log, filename="log.json"), n_clicks_timestamp]
