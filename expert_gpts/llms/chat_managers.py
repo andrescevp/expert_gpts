@@ -1,3 +1,4 @@
+import abc
 import logging
 from typing import List, Optional
 
@@ -30,7 +31,33 @@ def get_history(session_id, ai_key):
         )
 
 
-class SingleChatManager:
+class ChatSingleton(abc.ABCMeta, type):
+    """
+    Singleton metaclass for ensuring only one instance of a class.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """Call method for the singleton metaclass."""
+        cls_key = None
+        if cls not in cls._instances:
+            if "expert_key" in kwargs:
+                cls_key = f"expert_key_{kwargs['expert_key']}"
+                cls._instances[f"expert_key_{kwargs['expert_key']}"] = super(
+                    ChatSingleton, cls
+                ).__call__(*args, **kwargs)
+            if "chain_key" in kwargs:
+                cls_key = f"chain_key_{kwargs['chain_key']}"
+
+            cls._instances[cls_key] = super(ChatSingleton, cls).__call__(
+                *args, **kwargs
+            )
+
+        return cls._instances[cls_key]
+
+
+class SingleChatManager(metaclass=ChatSingleton):
     def __init__(
         self,
         llm_manager: BaseLLMManager,
@@ -127,7 +154,7 @@ class SingleChatManager:
         return answer
 
 
-class ChainChatManager:
+class ChainChatManager(metaclass=ChatSingleton):
     def __init__(
         self,
         llm_manager: BaseLLMManager,
@@ -178,7 +205,7 @@ class ChainChatManager:
             )
         )
         for x in self.history.messages:
-            self.memory.add_message(x)
+            self.memory.chat_memory.add_message(x)
 
     def ask(self, question):
         if self.enable_history_fuzzy_search:
@@ -239,6 +266,7 @@ class ChainChatManager:
             model=self.model,
             tools=self.tools,
             memory=self.memory if self.enable_memory else None,
+            agent_key=self.chain_key,
         )
 
         self.history.add_ai_message(answer)

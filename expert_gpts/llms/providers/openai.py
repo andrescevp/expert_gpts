@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from typing import List, Optional
 
 import langchain
@@ -29,6 +30,8 @@ COSTS = {
 
 
 class OpenAIApiManager(BaseLLMManager):
+    _agents = {}
+
     def __init__(self):
         super().__init__(COSTS)
 
@@ -69,18 +72,24 @@ Check your output and make sure it conforms format!
         user_input: str,  # type: ignore
         agent_type: AgentType = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         model: str | None = GPT_3_5_TURBO,
+        agent_key: str = "default",
         temperature: float = 0,
         max_tokens: int | None = None,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
     ) -> str:
         llm = self.get_llm(max_tokens, model, temperature)
-        agent = self.get_agent_executor(llm, agent_type, memory, tools)
+        if agent_key not in self._agents:
+            self._agents[agent_key] = self.get_agent_executor(
+                llm, agent_type, memory, tools
+            )
+        agent = self._agents[agent_key]
         with get_openai_callback() as cb:
             response = agent.run(input=user_input)
         self.update_cost(cb)
         return response
 
+    @lru_cache
     def get_llm(self, max_tokens, model, temperature) -> BaseChatModel:
         llm = ChatOpenAI(
             model_name=model,

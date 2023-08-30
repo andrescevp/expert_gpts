@@ -20,12 +20,16 @@ def layout(config_key=None):
     config = configurations[config_key].config
     return html.Div(
         children=[
-            html.H1(id="chat_title", className="p-2 mx-auto text-center"),
+            html.H1(
+                f"{configurations[config_key].config.chain.chain_key} Chain Chat",
+                id="chat_title",
+                className="p-2 mx-auto text-center",
+            ),
             dcc.Store(id="config_key", data=config_key),
             dcc.Store(id="web-chat-page-memory"),
             dcc.Store(id="session", data=dict(uid=str(uuid.uuid4()))),
             dcc.Location(id="url"),
-            html.Span(id="current_expert", className="d-none"),
+            html.Span("chain", id="current_expert", className="d-none"),
             dbc.Row(
                 children=[
                     dbc.Col(
@@ -72,7 +76,14 @@ def layout(config_key=None):
                     dbc.Col(
                         children=[
                             dbc.Card(
-                                children=[],
+                                children=[
+                                    get_system_chat_item(
+                                        "Hello I am a super assistant! I am able to "
+                                        "connect to others experts and tools in "
+                                        "this app to "
+                                        "help you."
+                                    )
+                                ],
                                 className="p-2 overflow-y-scroll",
                                 id="chat-history",
                                 style={"height": "calc(100vh - 400px)"},
@@ -116,10 +127,17 @@ def layout(config_key=None):
     )
 
 
+LOADING_SPINNER = dbc.Spinner()
+
+
 @dash.callback(
     Output("chat-history", "children", allow_duplicate=True),
     Output("last-message-time", "children"),
     Output("web-chat-page-memory", "data", allow_duplicate=True),
+    Output("user-prompt", "value"),
+    Output("user-prompt", "readonly", allow_duplicate=True),
+    Output("send-button", "disabled", allow_duplicate=True),
+    Output("send-button", "children", allow_duplicate=True),
     Input("current_expert", "children"),
     Input("last-message-time", "children"),
     Input("chat-history", "children"),
@@ -147,8 +165,24 @@ def add_chat_item(
             )
         )
         if not children:
-            return [chats, n_clicks_timestamp, default_memory_state]
-        return [children + chats, n_clicks_timestamp, default_memory_state]
+            return [
+                chats,
+                n_clicks_timestamp,
+                default_memory_state,
+                "",
+                "readonly",
+                "disabled",
+                [dbc.Spinner()],
+            ]
+        return [
+            children + chats,
+            n_clicks_timestamp,
+            default_memory_state,
+            "",
+            "readonly",
+            "disabled",
+            [dbc.Spinner()],
+        ]
     else:
         return dash.no_update
 
@@ -156,6 +190,9 @@ def add_chat_item(
 @dash.callback(
     Output("chat-history", "children", allow_duplicate=True),
     Output("web-chat-page-memory", "data", allow_duplicate=True),
+    Output("user-prompt", "readonly", allow_duplicate=True),
+    Output("send-button", "disabled", allow_duplicate=True),
+    Output("send-button", "children", allow_duplicate=True),
     Input("web-chat-page-memory", "data"),
     Input("session", "data"),
     Input("config_key", "data"),
@@ -188,6 +225,9 @@ def get_answer(data, session, config_key, chats_prevs):
                 answer=answer,
             )
         ),
+        False,
+        False,
+        "Send",
     ]
 
 

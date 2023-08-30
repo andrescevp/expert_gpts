@@ -59,6 +59,7 @@ class BaseLLMManager(metaclass=Singleton):
         user_input: str,  # type: ignore
         agent_type: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         model: str | None = None,
+        agent_key: str = "default",
         temperature: float = 0,
         max_tokens: int | None = None,
         memory: Optional[BaseChatMemory] = None,
