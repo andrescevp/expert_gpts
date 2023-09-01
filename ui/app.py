@@ -15,7 +15,7 @@ load_dotenv()
 app = Dash(
     __name__,
     use_pages=True,
-    external_stylesheets=[dbc.themes.DARKLY],
+    external_stylesheets=[dbc.themes.DARKLY, dbc.icons.BOOTSTRAP],
     prevent_initial_callbacks=True,
     suppress_callback_exceptions=True,
 )

@@ -1,5 +1,6 @@
 import abc
 import logging
+from functools import lru_cache
 from typing import List, Optional
 
 from langchain.agents import Tool
@@ -24,6 +25,7 @@ DEFAULT_EXPERT_CONFIG = ExpertItem()
 logger = logging.getLogger(__name__)
 
 
+@lru_cache
 def get_history(session_id, ai_key):
     with get_db_session() as session:
         return MysqlChatMessageHistory(

@@ -5,12 +5,17 @@ from dataclasses import asdict
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import ALL, Input, Output, dcc, html
+from dash import ALL, Input, Output, State, dcc, html
+from langchain.schema.messages import AIMessage, HumanMessage
 
+from expert_gpts.llms.chat_managers import get_history
 from expert_gpts.llms.main import LLMConfigBuilder
+from ui.components.chat import CHAT_COMPONENT_TEMPLATE
+from ui.components.chat_history import create_chat_list
 from ui.components.chat_messages import get_system_chat_item, get_user_chat_item
 from ui.config import get_configs
 from ui.pages.states.web_chat_states import WebChatPageState
+from ui.utils.chats import get_chats_list
 
 dash.register_page(__name__, path_template="/expert_chat/<config_key>")
 
@@ -19,6 +24,9 @@ configurations = get_configs()
 
 def layout(config_key=None):
     config = configurations[config_key].config
+    SESSION_ID = str(uuid.uuid4())
+    chats_uuids = get_chats_list(config.chain.chain_key, SESSION_ID)
+    experts_list = list(config.experts.__root__.keys())
     return html.Div(
         children=[
             html.H1(
@@ -26,9 +34,11 @@ def layout(config_key=None):
                 id="chat_title",
                 className="p-2 mx-auto text-center",
             ),
+            dcc.Store(id="session_chat_to_remove", data=None),
+            dcc.Store(id="chat_history", data=chats_uuids),
             dcc.Store(id="config_key", data=config_key),
             dcc.Store(id="web-chat-page-memory"),
-            dcc.Store(id="session", data=dict(uid=str(uuid.uuid4()))),
+            dcc.Store(id="session", data=dict(uid=SESSION_ID)),
             dcc.Location(id="url"),
             html.Span("chain", id="current_expert", className="d-none"),
             dbc.Row(
@@ -67,7 +77,7 @@ def layout(config_key=None):
                                             color="secondary",
                                         )
                                     )
-                                    for expert, expert_config in config.experts.__root__.items()
+                                    for expert in experts_list
                                 ]
                             ),
                         ],
@@ -75,88 +85,21 @@ def layout(config_key=None):
                         className="col-2",
                     ),
                     dbc.Col(
-                        children=[
-                            dbc.Card(
-                                children=[
-                                    get_system_chat_item(
-                                        "Hello I am a super assistant! I am able "
-                                        "to "
-                                        "connect to others experts and tools in "
-                                        "this app to "
-                                        "help you."
-                                    )
-                                ],
-                                className="p-2 overflow-y-scroll",
-                                id="chat-history",
-                                style={"height": "calc(100vh - 400px)"},
-                            ),
-                            dbc.Card(
-                                children=[
-                                    dbc.InputGroup(
-                                        [
-                                            dbc.Textarea(
-                                                placeholder="my questions",
-                                                id="user-prompt",
-                                            ),
-                                            dbc.Button("Send", id="send-button"),
-                                        ],
-                                    ),
-                                    dbc.Badge(
-                                        [
-                                            "Last message sent at:",
-                                            html.Span(
-                                                "-1",
-                                                id="last-message-time",
-                                                className="mx-2",
-                                            ),
-                                        ],
-                                        color="secondary",
-                                        className="mt-2 p-2 text-end",
-                                    ),
-                                    dbc.Card(
-                                        [
-                                            dbc.CardHeader(
-                                                [
-                                                    "Terminal - LangChainLog",
-                                                    dbc.Button(
-                                                        "Download",
-                                                        id="download-log",
-                                                        className="float-end",
-                                                    ),
-                                                ]
-                                            ),
-                                            dbc.CardBody(
-                                                [
-                                                    html.Pre(
-                                                        style={
-                                                            "height": "900px",
-                                                            "width": "100%",
-                                                            "overflow": "auto",
-                                                        },
-                                                        id="terminal",
-                                                    ),
-                                                    dcc.Download(
-                                                        id="download-terminal-log"
-                                                    ),
-                                                    dcc.Store(
-                                                        id="last-log-download", data=0
-                                                    ),
-                                                ],
-                                                style={
-                                                    "background-color": "black",
-                                                    "color": "white",
-                                                },
-                                            ),
-                                        ],
-                                        className="mt-2",
-                                    ),
-                                ],
-                                className="p-2",
-                            ),
-                        ],
+                        children=CHAT_COMPONENT_TEMPLATE,
                         className="col-8",
                     ),
-                    dbc.Col(children=[], className="col-2"),
+                    dbc.Col(
+                        children=[
+                            html.H4(
+                                "Chats History", className="p-2 mx-auto text-center"
+                            ),
+                            dbc.ListGroup(
+                                create_chat_list(chats_uuids),
+                                id="chats-message-history",
+                            ),
+                        ],
+                        className="col-2",
+                    ),
                 ],
                 id="chat-container",
                 className="w-100 h-100 mx-0",
@@ -166,14 +109,11 @@ def layout(config_key=None):
     )
 
 
-LOADING_SPINNER = dbc.Spinner()
-
-
 @dash.callback(
     Output("chat-history", "children", allow_duplicate=True),
-    Output("last-message-time", "children"),
+    Output("last-message-time", "children", allow_duplicate=True),
     Output("web-chat-page-memory", "data", allow_duplicate=True),
-    Output("user-prompt", "value"),
+    Output("user-prompt", "value", allow_duplicate=True),
     Output("user-prompt", "readonly", allow_duplicate=True),
     Output("send-button", "disabled", allow_duplicate=True),
     Output("send-button", "children", allow_duplicate=True),
@@ -193,6 +133,7 @@ def add_chat_item(
     # check if user actually hit the button
     if n_clicks_timestamp and last_send and int(n_clicks_timestamp) <= int(last_send):
         return dash.no_update
+
     message_sent_at = datetime.datetime.fromtimestamp(
         n_clicks_timestamp / 1000
     ).strftime("%Y-%m-%d %H:%M:%S")
@@ -234,7 +175,7 @@ def add_chat_item(
     Output("send-button", "children", allow_duplicate=True),
     Output("terminal", "children", allow_duplicate=True),
     Input("web-chat-page-memory", "data"),
-    Input("session", "data"),
+    State("session", "data"),
     Input("config_key", "data"),
     Input("chat-history", "children"),
     prevent_initial_call=True,
@@ -248,9 +189,7 @@ def get_answer(data, session, config_key, chats_prevs):
     if data.answer:
         return dash.no_update
     if data.current_expert != "chain":
-        expert_chat = builder.get_expert_chat(
-            data.current_expert, f"{data.current_expert}_{session['uid']}"
-        )
+        expert_chat = builder.get_expert_chat(data.current_expert, session["uid"])
         answer = expert_chat.ask(data.current_user_prompt)
         log = expert_chat.get_log()
     else:
@@ -278,18 +217,21 @@ def get_answer(data, session, config_key, chats_prevs):
     Output("chat-history", "children", allow_duplicate=True),
     Output("current_expert", "children"),
     Output("chat_title", "children"),
+    Output("chats-message-history", "children"),
+    State("session", "data"),
     Input("config_key", "data"),
-    Input({"type": "btn-expert-init", "index": ALL}, "n_clicks"),
+    Input({"type": "btn-expert-init", "index": ALL}, "n_clicks_timestamp"),
     Input({"type": "btn-expert-init", "index": ALL}, "value"),
     prevent_initial_call=True,
 )
-def get_expert_chat(config_key, n_clicks, value):
+def get_expert_chat(session_id, config_key, n_clicks, value):
     config = configurations[config_key].config
     valued_n_clicks = [
         (n_click, val) for n_click, val in zip(n_clicks, value) if n_click
     ]
     last_clicked = sorted(valued_n_clicks, key=lambda x: x[0])[-1][1]
     if last_clicked == "chain":
+        chats_uuids = get_chats_list(config.chain.chain_key, session_id["uid"])
         return [
             [
                 get_system_chat_item(
@@ -300,11 +242,14 @@ def get_expert_chat(config_key, n_clicks, value):
             ],
             last_clicked,
             f"{configurations[config_key].config.chain.chain_key} Chain",
+            create_chat_list(chats_uuids),
         ]
+    chats_uuids = get_chats_list(last_clicked, session_id["uid"])
     return [
         [get_system_chat_item(f"Hello I am {last_clicked} assistant!")],
         last_clicked,
         config.experts.__root__[last_clicked].name or last_clicked,
+        create_chat_list(chats_uuids),
     ]
 
 
@@ -328,3 +273,80 @@ def download_log(last_download_at, n_clicks, n_clicks_timestamp, log):
     ):
         return dash.no_update
     return [dict(content=log, filename="log.json"), n_clicks_timestamp]
+
+
+@dash.callback(
+    Output("chats-message-history", "children", allow_duplicate=True),
+    Output("session_chat_to_remove", "data", allow_duplicate=True),
+    State("session", "data"),
+    Input("config_key", "data"),
+    Input("current_expert", "children"),
+    Input("session_chat_to_remove", "data"),
+    Input("btn-chat-session-remove-confirm", "submit_n_clicks"),
+    prevent_initial_call=True,
+)
+def remove_chat_session(
+    session_id, config_key, current_expert, session_chat_to_remove, submit_n_clicks
+):
+    if not submit_n_clicks:
+        return dash.no_update
+    config = configurations[config_key].config
+    ai_key = current_expert if current_expert != "chain" else config.chain.chain_key
+
+    chat_history = get_history(session_id["uid"], ai_key)
+    chat_history.delete_chat_session(session_chat_to_remove)
+    chats_uuids = get_chats_list(ai_key, session_id["uid"])
+    return [create_chat_list(chats_uuids), None]
+
+
+@dash.callback(
+    Output("btn-chat-session-remove-confirm", "displayed"),
+    Output("session_chat_to_remove", "data", allow_duplicate=True),
+    Input({"type": "btn-chat-session-remove", "index": ALL}, "n_clicks_timestamp"),
+    Input({"type": "btn-chat-session-remove", "index": ALL}, "value"),
+    config_prevent_initial_callbacks=True,
+)
+def display_confirm_remove_chat(n_clicks, value):
+    all_none = [x is None for x in n_clicks]
+    if all(all_none):
+        return dash.no_update, dash.no_update
+    valued_n_clicks = [
+        (n_click, val) for n_click, val in zip(n_clicks, value) if n_click
+    ]
+    last_clicked = sorted(valued_n_clicks, key=lambda x: x[0])[-1][1]
+    return [True, last_clicked]
+
+
+@dash.callback(
+    Output("chat-history", "children", allow_duplicate=True),
+    Output("session", "data"),
+    Input("config_key", "data"),
+    Input("current_expert", "children"),
+    Input({"type": "btn-chat-session-load", "index": ALL}, "n_clicks_timestamp"),
+    Input({"type": "btn-chat-session-load", "index": ALL}, "value"),
+    config_prevent_initial_callbacks=True,
+)
+def load_chat(config_key, current_expert, n_clicks, value):
+    all_none = [x is None for x in n_clicks]
+    if all(all_none):
+        return dash.no_update, dash.no_update
+    config = configurations[config_key].config
+    ai_key = current_expert if current_expert != "chain" else config.chain.chain_key
+    valued_n_clicks = [
+        (n_click, val) for n_click, val in zip(n_clicks, value) if n_click
+    ]
+    last_clicked = sorted(valued_n_clicks, key=lambda x: x[0])[-1][1]
+
+    chat_history = get_history(last_clicked, ai_key)
+    messages = []
+    for message in chat_history.raw_messages:
+        if type(message["message"]) == HumanMessage:
+            messages.append(
+                get_user_chat_item(message["message"].content, message["created_at"])
+            )
+        elif type(message["message"]) == AIMessage:
+            messages.append(
+                get_system_chat_item(message["message"].content, message["created_at"])
+            )
+
+    return [messages, {"uid": last_clicked}]

@@ -1,9 +1,15 @@
 import json
 import logging
-from typing import List
+from datetime import datetime
+from typing import Dict, List
 
 from langchain.schema import BaseChatMessageHistory
-from langchain.schema.messages import BaseMessage, _message_to_dict, messages_from_dict
+from langchain.schema.messages import (
+    BaseMessage,
+    _message_from_dict,
+    _message_to_dict,
+    messages_from_dict,
+)
 from sqlalchemy.orm import Session
 
 from expert_gpts.database import get_db_session
@@ -35,6 +41,22 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
             items = [json.loads(record.message) for record in result]
             messages = messages_from_dict(items)
             return messages
+
+    @property
+    def raw_messages(self):  # type: ignore
+        """Retrieve all messages from db"""
+        with get_db_session() as session:
+            result = session.query(ExpertGPTsChatMessage).where(
+                ExpertGPTsChatMessage.session_id == self.session_id
+            )
+            items = [
+                {
+                    "message": _message_from_dict(json.loads(record.message)),
+                    "created_at": record.created_at,
+                }
+                for record in result
+            ]
+            return items
 
     def add_message(self, message: BaseMessage) -> None:
         """Append the message to the record in db"""
@@ -69,3 +91,30 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
                     f"At {record.created_at}, by {content['type']}: {content['data']['content']}"
                 )
             return items
+
+    def get_chats_sessions(self) -> Dict[str, datetime]:  # type: ignore
+        """Retrieve all messages from db"""
+        with get_db_session() as session:
+            result = (
+                session.query(ExpertGPTsChatMessage)
+                .filter(
+                    ExpertGPTsChatMessage.ai_key == self.ai_key,
+                )
+                .distinct()
+            )
+            sessions_dict = {record.session_id: record.created_at for record in result}
+            return sessions_dict
+
+    def delete_chat_session(self, session_id) -> bool:  # type: ignore
+        """Delete a record by ai_key and session_id"""
+        with get_db_session() as session:
+            result = (
+                session.query(ExpertGPTsChatMessage)
+                .filter(
+                    ExpertGPTsChatMessage.ai_key == self.ai_key,
+                    ExpertGPTsChatMessage.session_id == session_id,
+                )
+                .delete()
+            )
+            session.commit()
+            return result

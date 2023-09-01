@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 
 from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
 from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
@@ -38,21 +37,6 @@ class LLMConfigBuilder:
                 self.config.custom_tools
             )
             self.custom_tools = self.config.custom_tools.get_attribute_built()
-
-    def get_expert_chats(self, session_id: str = "same-session"):
-        chats = defaultdict()
-        for expert_key, expert_config in self.experts_map.items():
-            chats[expert_key] = SingleChatManager(
-                self.llm_manager,
-                expert_key,
-                expert_config=expert_config,
-                session_id=session_id,
-                embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
-                    self.llm_manager, expert_key, expert_config.embeddings.__root__
-                ),
-            )
-
-        return chats
 
     def get_expert_chat(self, expert_key: str, session_id: str = "same-session"):
         for dict_expert_key, expert_config in self.experts_map.items():
