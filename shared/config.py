@@ -59,7 +59,7 @@ class ExpertItem(BaseModel):
     enable_history_fuzzy_search: bool = False
     fuzzy_search_distance: int = 5
     fuzzy_search_limit: int = 5
-    enable_summary_memory: bool = (True,)
+    enable_summary_memory: bool = True
 
     def get_chat_messages(self, text) -> List[BaseMessage]:
         template = ChatPromptTemplate.from_messages(
@@ -99,8 +99,8 @@ class Chain(BaseModel):
     enable_history_fuzzy_search: bool = False
     fuzzy_search_distance: int = 5
     fuzzy_search_limit: int = 5
-    enable_summary_memory: bool = (True,)
-    enable_memory: bool = (True,)
+    enable_summary_memory: bool = True
+    enable_memory: bool = True
 
 
 class CustomModule(BaseModel):

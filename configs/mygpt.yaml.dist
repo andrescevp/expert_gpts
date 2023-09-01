@@ -6,9 +6,14 @@ chain:
   temperature: 0
   max_tokens: ~
   model: gpt-3.5-turbo
-  get_from_memory_as_tool: False # this will create a tool to access the memory on demand if the chain needs it
-  save_in_memory_as_tool: False # this will create a tool to save in memory on demand if the user needs it
-  query_memory_before_ask: False
+  get_from_memory_as_tool: false
+  save_in_memory_as_tool: false
+  query_memory_before_ask: false
+  enable_history_fuzzy_search: false
+  fuzzy_search_distance: 5
+  fuzzy_search_limit: 5
+  enable_summary_memory: true
+  enable_memory: true
   embeddings:
     my_general_internal_knowledge:
       folder_path: ./documents
@@ -16,14 +21,26 @@ chain:
       content: |
         Joe Black is a fictional character from the 1998 American fantasy drama film Meet Joe Black.
 enabled_default_agent_tools: ~
-  #- generalist_expert
-  #- summarize_expert
-  #- no_code_python_functions_expert
-  #- thinker_expert
+#  - generalist_expert
+#  - summarize_expert
+#  - no_code_python_functions_expert
+#  - thinker_expert
 experts:
   python_expert:
-    use_as_tool: True
     name: Senior Python Developer 🚀
+    model: gpt-4
+    temperature: 1
+    max_tokens: 4000
+    use_as_tool: true
+    max_tokes_as_tool: 4000
+    model_as_tool: gpt-3.5-turbo
+    temperature_as_tool: 0.5
+    tool_return_direct: false
+    query_memory_before_ask: true
+    enable_history_fuzzy_search: false
+    fuzzy_search_distance: 5
+    fuzzy_search_limit: 5
+    enable_summary_memory: true
     prompts:
       system: |
         I am a Senior Python Developer with 10+ years of experience in Python programming.
@@ -32,7 +49,7 @@ experts:
         content: |
           some helpful content
   react_nextjs_expert:
-    use_as_tool: True
+    use_as_tool: true
     name: Senior JS Developer 💲
     prompts:
       system: |
@@ -43,7 +60,7 @@ experts:
         content: |
           This is just a test document
   css_expert:
-    use_as_tool: True
+    use_as_tool: true
     name: Senior CSS Developer 💲
     prompts:
       system: |
