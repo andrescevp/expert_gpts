@@ -9,9 +9,9 @@ from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import SystemMessage
 
+from expert_gpts.chat_history.mysql import MysqlChatMessageHistory
 from expert_gpts.database import get_db_session
 from expert_gpts.embeddings.base import EmbeddingsHandlerBase
-from expert_gpts.memory.mysql import MysqlChatMessageHistory
 from shared.config import ExpertItem
 from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO
@@ -46,9 +46,6 @@ class ChatSingleton(abc.ABCMeta, type):
         if cls not in cls._instances:
             if "expert_key" in kwargs:
                 cls_key = f"expert_key_{kwargs['expert_key']}"
-                cls._instances[f"expert_key_{kwargs['expert_key']}"] = super(
-                    ChatSingleton, cls
-                ).__call__(*args, **kwargs)
             if "chain_key" in kwargs:
                 cls_key = f"chain_key_{kwargs['chain_key']}"
 
@@ -126,7 +123,6 @@ class SingleChatManager(metaclass=ChatSingleton):
         if self.embeddings and self.query_memory_before_ask:
             try:
                 context = self.embeddings.search(search_context_question).response
-                self.history.add_ai_message("Embeddings result: " + context)
             except Exception as e:
                 logger.error("Could not query embeddings: %s", e)
 
@@ -140,7 +136,9 @@ class SingleChatManager(metaclass=ChatSingleton):
                 CHAT_HUMAN_PROMPT_TEMPLATE,
             ]
         )
+
         self.history.add_user_message(question)
+
         answer = self.llm_manager.create_chat_completion(
             template.format_messages(
                 question=question,
@@ -221,6 +219,7 @@ class ChainChatManager(metaclass=ChatSingleton):
             )
         else:
             chat_history = self.history.messages[:5]
+
         if self.enable_summary_memory:
             chat_history = self.memory_summary.predict_new_summary(
                 chat_history, self.memory_summary.buffer
@@ -243,7 +242,6 @@ class ChainChatManager(metaclass=ChatSingleton):
                 context = self.embeddings.search(search_context_question)
             except Exception as e:
                 logger.error("Could not query embeddings: %s", e)
-            self.history.add_ai_message("Embeddings result: " + str(context))
 
         template = ChatPromptTemplate.from_messages(
             [
@@ -251,8 +249,7 @@ class ChainChatManager(metaclass=ChatSingleton):
             ]
         )
 
-        if self.enable_summary_memory:
-            self.history.add_user_message(question)
+        self.history.add_user_message(question)
 
         answer = self.llm_manager.create_chat_completion_with_agent(
             "\n".join(
@@ -290,7 +287,6 @@ def get_standalone_question(
             CHAT_HUMAN_PROMPT_TEMPLATE,
         ]
     )
-    history.add_user_message(question)
     return llm_manager.create_chat_completion(
         template.format_messages(
             question=question,

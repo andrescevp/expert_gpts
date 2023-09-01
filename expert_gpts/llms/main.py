@@ -1,4 +1,6 @@
+import abc
 import logging
+from functools import lru_cache
 
 from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
 from expert_gpts.llms.chat_managers import ChainChatManager, SingleChatManager
@@ -11,12 +13,33 @@ from shared.llms.system_prompts import BASE_EXPERTS
 logger = logging.getLogger(__name__)
 
 
-class LLMConfigBuilder:
+class LLMConfigBuilderSingleton(abc.ABCMeta, type):
+    """
+    Singleton metaclass for ensuring only one instance of a class.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """Call method for the singleton metaclass."""
+        cls_key = None
+        if cls not in cls._instances:
+            config_key = args[0].chain.chain_key
+            cls_key = f"llm_config_{config_key}"
+            cls._instances[cls_key] = super(LLMConfigBuilderSingleton, cls).__call__(
+                *args, **kwargs
+            )
+
+        return cls._instances[cls_key]
+
+
+class LLMConfigBuilder(metaclass=LLMConfigBuilderSingleton):
     def __init__(self, config: Config):
-        self.module_loader = ModuleLoader()
         self.config = config
+        self.module_loader = ModuleLoader()
         self.llm_manager = OpenAIApiManager()
         self.expert_agent_manager = ExpertAgentManager()
+        self.embeddings_factory = EmbeddingsHandlerFactory()
         self.default_tools = {}
         if self.config.enabled_default_agent_tools:
             self.default_tools = {
@@ -38,6 +61,7 @@ class LLMConfigBuilder:
             )
             self.custom_tools = self.config.custom_tools.get_attribute_built()
 
+    @lru_cache
     def get_expert_chat(self, expert_key: str, session_id: str = "same-session"):
         for dict_expert_key, expert_config in self.experts_map.items():
             if dict_expert_key == expert_key:
@@ -46,7 +70,7 @@ class LLMConfigBuilder:
                     expert_key,
                     expert_config=expert_config,
                     session_id=session_id,
-                    embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
+                    embeddings=self.embeddings_factory.get_expert_embeddings(
                         self.llm_manager, expert_key, expert_config.embeddings.__root__
                     ),
                     query_memory_before_ask=expert_config.query_memory_before_ask,
@@ -58,6 +82,7 @@ class LLMConfigBuilder:
 
         raise Exception(f"Expert {expert_key} not found")
 
+    @lru_cache
     def get_expert_tools(self, prefix: str = "", session_id: str = "same-session"):
         experts_as_tools = {
             **{k: v for k, v in self.default_tools.items() if v.use_as_tool},
@@ -67,8 +92,9 @@ class LLMConfigBuilder:
             experts_as_tools, prefix, session_id=session_id
         )
 
+    @lru_cache
     def get_chain_chat(self, session_id: str = "same-session"):
-        chain_memory = EmbeddingsHandlerFactory().get_chain_embeddings(
+        chain_memory = self.embeddings_factory.get_chain_embeddings(
             self.llm_manager,
             embeddings=self.config.chain.embeddings.__root__
             if self.config.chain.embeddings
@@ -115,7 +141,7 @@ class LLMConfigBuilder:
 
     def load_docs(self):
         # main chain embeddings load
-        EmbeddingsHandlerFactory().get_chain_embeddings(
+        self.embeddings_factory.get_chain_embeddings(
             self.llm_manager,
             self.config.chain.embeddings.__root__
             if self.config.chain.embeddings
@@ -126,7 +152,7 @@ class LLMConfigBuilder:
         )
 
         for dict_expert_key, expert_config in self.config.experts.__root__.items():
-            EmbeddingsHandlerFactory().get_expert_embeddings(
+            self.embeddings_factory.get_expert_embeddings(
                 self.llm_manager,
                 dict_expert_key,
                 expert_config.embeddings.__root__,

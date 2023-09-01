@@ -1,7 +1,5 @@
-from datetime import datetime
 from typing import Optional
 
-from langchain.schema.messages import BaseMessage
 from sqlalchemy import JSON, DateTime, Integer, String, text
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -13,7 +11,7 @@ class ChatMessage(Base):
     __tablename__ = "message_store"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    created_at: Mapped[str] = mapped_column(DateTime(), default=datetime.utcnow)
+    created_at: Mapped[str] = mapped_column(DateTime())
     session_id: Mapped[str] = mapped_column(String(190))
     ai_key: Mapped[str] = mapped_column(String(190))
     message: Mapped[str] = mapped_column(JSON())
@@ -83,7 +81,7 @@ END;
             connection.execute(text(levenstein))
 
     @classmethod
-    def search_by_message(
+    def search_by_message_levenstein(
         cls,
         ai_key: str,
         session_id: str,
@@ -121,34 +119,4 @@ BETWEEN 0 AND {distance} ORDER BY created_at ASC LIMIT {limit};
                 )
             )
         )
-        return query.all()
-
-    @classmethod
-    def clear(cls, session: Session, session_id: str) -> None:
-        query = f"DELETE FROM {cls.__tablename__} WHERE session_id = :session_id;"
-        session.execute(text(query), {"session_id": session_id})
-
-    @classmethod
-    def truncate(cls, session: Session) -> None:
-        query = f"TRUNCATE TABLE {cls.__tablename__}"
-        session.execute(text(query))
-
-    @classmethod
-    def add_message(cls, session_id: str, message: str, session: Session) -> None:
-        """Append the message to the record in PostgreSQL"""
-        new_message = ChatMessage(
-            session_id=session_id,
-            message=message,
-            created_at=datetime.utcnow(),
-            quality=0,
-        )
-        session.add(new_message)
-        session.commit()
-
-    @classmethod
-    def get_messages_by_session_id(
-        cls, session: Session, session_id: str
-    ) -> list[BaseMessage]:
-        """Get all messages by session_id"""
-        query = session.query(ChatMessage).filter(ChatMessage.session_id == session_id)
         return query.all()

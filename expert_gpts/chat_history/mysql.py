@@ -64,7 +64,11 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
             jsonstr = json.dumps(_message_to_dict(message))
             session.add(
                 ExpertGPTsChatMessage(
-                    session_id=self.session_id, message=jsonstr, ai_key=self.ai_key
+                    session_id=self.session_id,
+                    message=jsonstr,
+                    ai_key=self.ai_key,
+                    quality=0,
+                    created_at=datetime.now().isoformat(),
                 )
             )
             session.commit()
@@ -76,12 +80,11 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
             session.query(ExpertGPTsChatMessage).filter(
                 ExpertGPTsChatMessage.session_id == self.session_id
             ).delete()
-            session.commit()
 
     def fuzzy_search(self, search: str, distance: int = 5, limit: int = 5):
         logger.info(f"Searching for {search} in {self.session_id}")
         with get_db_session() as session:
-            messages = ExpertGPTsChatMessage.search_by_message(
+            messages = ExpertGPTsChatMessage.search_by_message_levenstein(
                 self.ai_key, self.session_id, search, session, distance, limit
             )
             items = []
@@ -100,6 +103,7 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
                 .filter(
                     ExpertGPTsChatMessage.ai_key == self.ai_key,
                 )
+                .order_by(ExpertGPTsChatMessage.created_at.desc())
                 .distinct()
             )
             sessions_dict = {record.session_id: record.created_at for record in result}
