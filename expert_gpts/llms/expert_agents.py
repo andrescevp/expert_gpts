@@ -88,6 +88,7 @@ class ExpertAgentManager(metaclass=Singleton):
                     fuzzy_search_distance=expert.fuzzy_search_distance,
                     fuzzy_search_limit=expert.fuzzy_search_limit,
                     enable_summary_memory=expert.enable_summary_memory,
+                    create_standalone_question_to_search_context=expert.create_standalone_question_to_search_context,
                 )
                 tools.append(
                     Tool(

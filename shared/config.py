@@ -60,6 +60,7 @@ class ExpertItem(BaseModel):
     fuzzy_search_distance: int = 5
     fuzzy_search_limit: int = 5
     enable_summary_memory: bool = True
+    create_standalone_question_to_search_context: bool = True
 
     def get_chat_messages(self, text) -> List[BaseMessage]:
         template = ChatPromptTemplate.from_messages(

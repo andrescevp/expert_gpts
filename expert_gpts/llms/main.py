@@ -78,6 +78,7 @@ class LLMConfigBuilder(metaclass=LLMConfigBuilderSingleton):
                     fuzzy_search_distance=expert_config.fuzzy_search_distance,
                     fuzzy_search_limit=expert_config.fuzzy_search_limit,
                     enable_summary_memory=expert_config.enable_summary_memory,
+                    create_standalone_question_to_search_context=expert_config.create_standalone_question_to_search_context,
                 )
 
         raise Exception(f"Expert {expert_key} not found")
