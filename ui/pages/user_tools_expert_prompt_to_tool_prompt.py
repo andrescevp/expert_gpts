@@ -28,8 +28,10 @@ form = [
         children=[
             dbc.InputGroup(
                 [
-                    dbc.Textarea(placeholder="my questions", id="user-prompt"),
-                    dbc.Button("Send", id="send-button"),
+                    dbc.Textarea(
+                        placeholder="my questions", id="%s-user-prompt" % COMPONENT_ID
+                    ),
+                    dbc.Button("Send", id="%s-send-button" % COMPONENT_ID),
                 ],
             ),
             dbc.Badge(
@@ -110,9 +112,9 @@ def layout():
     Output("%s-last-message-time" % COMPONENT_ID, "children"),
     Output("%s-web-chat-page-memory" % COMPONENT_ID, "data", allow_duplicate=True),
     Input("%s-last-message-time" % COMPONENT_ID, "children"),
-    Input("send-button", "n_clicks"),
-    Input("send-button", "n_clicks_timestamp"),
-    Input("user-prompt", "value"),
+    Input("%s-send-button" % COMPONENT_ID, "n_clicks"),
+    Input("%s-send-button" % COMPONENT_ID, "n_clicks_timestamp"),
+    Input("%s-user-prompt" % COMPONENT_ID, "value"),
     Input("%s-chat-history" % COMPONENT_ID, "children"),
     prevent_initial_call=True,
 )

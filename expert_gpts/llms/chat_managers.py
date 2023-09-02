@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from langchain.agents import Tool
 from langchain.agents.agent_types import AgentType
-from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory
+from langchain.memory import ConversationBufferMemory
 from langchain.prompts import ChatPromptTemplate
 from langchain.prompts.chat import SystemMessage
 
@@ -85,34 +85,42 @@ class SingleChatManager(metaclass=ChatSingleton):
         self.llm_manager = llm_manager
         self.history = get_history(session_id, expert_key)
         self.session_id = session_id
-        self.memory_summary = ConversationSummaryMemory.from_messages(
+        self.memory = ConversationBufferMemory(
             llm=self.llm_manager.get_llm(
                 temperature=0, max_tokens=None, model=GPT_3_5_TURBO
             ),
+            memory_key="chat_history",
+            return_messages=True,
             chat_memory=self.history,
         )
+        # self.memory_summary = ConversationSummaryMemory.from_messages(
+        #         llm=self.llm_manager.get_llm(
+        #                 temperature=0, max_tokens=None, model=GPT_3_5_TURBO
+        #                 ),
+        #         chat_memory=self.history,
+        #         )
 
     def ask(self, question):
-        if self.enable_history_fuzzy_search:
-            chat_history = self.history.fuzzy_search(
-                question,
-                limit=self.fuzzy_search_limit,
-                distance=self.fuzzy_search_distance,
-            )
-        else:
-            chat_history = self.history.messages[:5]
-
-        if self.enable_summary_memory:
-            chat_history = self.memory_summary.predict_new_summary(
-                chat_history, self.memory_summary.buffer
-            )
+        # if self.enable_history_fuzzy_search:
+        #     chat_history = self.history.fuzzy_search(
+        #             question,
+        #             limit=self.fuzzy_search_limit,
+        #             distance=self.fuzzy_search_distance,
+        #             )
+        # else:
+        #     chat_history = self.history.messages[:5]
+        #
+        # if self.enable_summary_memory:
+        #     chat_history = self.memory_summary.predict_new_summary(
+        #             chat_history, self.memory_summary.buffer
+        #             )
 
         search_context_question = question
         if self.create_standalone_question_to_search_context:
             search_context_question = get_standalone_question(
                 question,
                 self.history,
-                chat_history,
+                self.memory.buffer,
                 self.llm_manager,
                 self.expert_config.temperature,
                 self.expert_config.max_tokens,
@@ -143,7 +151,6 @@ class SingleChatManager(metaclass=ChatSingleton):
             template.format_messages(
                 question=question,
                 context=context,
-                history=chat_history,
             ),
             temperature=self.expert_config.temperature,
             max_tokens=self.expert_config.max_tokens,
@@ -167,7 +174,7 @@ class ChainChatManager(metaclass=ChatSingleton):
         tools: Optional[List[Tool]] = None,
         model: str | None = None,
         session_id: str = "same-session",
-        agent_type: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         embeddings: Optional[EmbeddingsHandlerBase] = None,
         query_memory_before_ask: bool = True,
         enable_history_fuzzy_search: bool = True,
@@ -196,41 +203,42 @@ class ChainChatManager(metaclass=ChatSingleton):
         self.llm_manager = llm_manager
         self.history = get_history(session_id, self.chain_key)
         self.session_id = session_id
-        self.memory_summary = ConversationSummaryMemory.from_messages(
-            llm=self.llm_manager.get_llm(
-                temperature=0, max_tokens=None, model=GPT_3_5_TURBO
-            ),
-            chat_memory=self.history,
-        )
+        # self.memory_summary = ConversationSummaryMemory.from_messages(
+        #         llm=self.llm_manager.get_llm(
+        #                 temperature=0, max_tokens=None, model=GPT_3_5_TURBO
+        #                 ),
+        #         chat_memory=self.history,
+        #         )
         self.memory = ConversationBufferMemory(
             llm=self.llm_manager.get_llm(
                 temperature=0, max_tokens=None, model=GPT_3_5_TURBO
-            )
+            ),
+            memory_key="chat_history",
+            return_messages=True,
+            chat_memory=self.history,
         )
-        for x in self.history.messages:
-            self.memory.chat_memory.add_message(x)
 
     def ask(self, question):
-        if self.enable_history_fuzzy_search:
-            chat_history = self.history.fuzzy_search(
-                question,
-                limit=self.fuzzy_search_limit,
-                distance=self.fuzzy_search_distance,
-            )
-        else:
-            chat_history = self.history.messages[:5]
+        # if self.enable_history_fuzzy_search:
+        #     chat_history = self.history.fuzzy_search(
+        #             question,
+        #             limit=self.fuzzy_search_limit,
+        #             distance=self.fuzzy_search_distance,
+        #             )
+        # else:
+        #     chat_history = self.history.messages[:5]
 
-        if self.enable_summary_memory:
-            chat_history = self.memory_summary.predict_new_summary(
-                chat_history, self.memory_summary.buffer
-            )
+        # if self.enable_summary_memory:
+        #     chat_history = self.memory_summary.predict_new_summary(
+        #             chat_history, self.memory_summary.buffer
+        #             )
 
         search_context_question = question
         if self.create_standalone_question_to_search_context:
             search_context_question = get_standalone_question(
                 question,
                 self.history,
-                chat_history,
+                self.memory.buffer,
                 self.llm_manager,
                 self.temperature,
                 self.max_tokens,

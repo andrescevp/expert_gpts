@@ -54,7 +54,7 @@ Embeddings is a vector database that is used to store the context of the questio
 
 History is a database that store the question and the answer of the expert or the chain per user with a session id.
 It is implemented with MariaDB because it allows to use an implementation of fuzzy search using levenstein.
-So what the history is is a selection of messages based in the proximity of the question.
+So what the history is a selection of messages based in the proximity of the question.
 
 @see: https://lucidar.me/en/web-dev/levenshtein-distance-in-mysql/
 

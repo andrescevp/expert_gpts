@@ -14,6 +14,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
 
+from expert_gpts.llms.agent import ConvoOutputCustomParser
 from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
 from shared.llms.system_prompts import get_open_ai_prompt_template
@@ -47,9 +48,11 @@ class OpenAIApiManager(BaseLLMManager):
             llm=llm,
             agent=agent_type,
             memory=memory,
-            handle_parsing_errors="""
-Check your output and make sure it conforms format!
-            """,
+            agent_kwargs={
+                "output_parser": ConvoOutputCustomParser(),
+                "system_message": "foooo",
+            },
+            # return_intermediate_steps=True,
         )
 
     def create_chat_completion(

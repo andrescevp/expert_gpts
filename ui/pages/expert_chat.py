@@ -345,8 +345,6 @@ def load_chat(config_key, current_expert, n_clicks, value):
                 get_user_chat_item(message["message"].content, message["created_at"])
             )
         elif type(message["message"]) == AIMessage:
-            messages.append(
-                get_system_chat_item(message["message"].content, message["created_at"])
-            )
+            messages.append(get_system_chat_item(message["message"].content))
 
     return [messages, {"uid": last_clicked}]
