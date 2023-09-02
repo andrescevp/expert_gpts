@@ -50,7 +50,7 @@ class OpenAIApiManager(BaseLLMManager):
             memory=memory,
             agent_kwargs={
                 "output_parser": ConvoOutputCustomParser(),
-                "system_message": "foooo",
+                # "system_message": "foooo",
             },
             # return_intermediate_steps=True,
         )
