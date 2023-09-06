@@ -13,6 +13,7 @@ from llama_index import (
     StringIterableReader,
     VectorStoreIndex,
 )
+from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.langchain_helpers.text_splitter import TokenTextSplitter
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.response.schema import RESPONSE_TYPE
@@ -57,7 +58,7 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
         for key, value in embeddings.items():
             if value.folder_path:
                 self.documents.extend(
-                    SimpleDirectoryReader(value.folder_path).load_data()
+                    SimpleDirectoryReader(value.folder_path, recursive=True).load_data()
                 )
 
         for key, value in embeddings.items():
@@ -106,9 +107,17 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
                 service_context=service_context,
             )
 
+        self.metadata_postprocessor = MetadataReplacementPostProcessor(
+            target_metadata_key="window"
+        )
+
     def search(self, query: str) -> RESPONSE_TYPE:
         logger.debug(f"query: {query}")
-        return self.index.as_query_engine().query(query)
+        # https://gpt-index.readthedocs.io/en/latest/examples/node_postprocessor/MetadataReplacementDemo.html
+        return self.index.as_query_engine(
+            similarity_top_k=2,
+            node_postprocessors=[self.metadata_postprocessor],
+        ).query(query)
 
     def save(self, remember_this: List[str]):
         logger.debug(f"remember_this: {remember_this}")

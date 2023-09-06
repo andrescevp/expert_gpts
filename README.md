@@ -8,6 +8,9 @@ This is a framework to configure LangChain GPTs for different tasks driven by a 
 
 ## Installation
 
+Install Docker and Docker Compose, likewise Python 3.10 and pip.
+Install torch from https://pytorch.org/get-started/locally/
+
 1. Create configs files and edit them.
 
 ```bash

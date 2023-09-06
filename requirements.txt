@@ -20,3 +20,9 @@ accelerate==0.22.0
 bitsandbytes==0.41.1
 scipy==1.11.2
 xformers==0.0.21
+pypdf==3.15.5
+XlsxWriter==3.1.2
+lxml==4.9.3
+python-pptx==0.6.22
+Pillow==9.3.0
+docx2txt==0.8
