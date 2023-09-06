@@ -13,6 +13,7 @@ from llama_index import (
     StringIterableReader,
     VectorStoreIndex,
 )
+from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.langchain_helpers.text_splitter import TokenTextSplitter
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.response.schema import RESPONSE_TYPE
@@ -108,7 +109,12 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
 
     def search(self, query: str) -> RESPONSE_TYPE:
         logger.debug(f"query: {query}")
-        return self.index.as_query_engine().query(query)
+        return self.index.as_query_engine(
+            similarity_top_k=2,
+            node_postprocessors=[
+                MetadataReplacementPostProcessor(target_metadata_key="window")
+            ],
+        ).query(query)
 
     def save(self, remember_this: List[str]):
         logger.debug(f"remember_this: {remember_this}")
