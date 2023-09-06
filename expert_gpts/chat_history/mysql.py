@@ -18,15 +18,22 @@ from expert_gpts.database.chat_message import ChatMessage as ExpertGPTsChatMessa
 logger = logging.getLogger(__name__)
 
 
+class MysqlFuzzySearchConfig:
+    def __init__(self, distance: int = 5, limit: int = 5):
+        self.distance = distance
+        self.limit = limit
+
+    def __repr__(self):
+        return f"<MysqlFuzzySearchConfig distance={self.distance} limit={self.limit}>"
+
+    def __str__(self):
+        return self.__repr__()
+
+
 class MysqlChatMessageHistory(BaseChatMessageHistory):
     """Chat message history stored in a Postgres database."""
 
-    def __init__(
-        self,
-        session_id: str,
-        ai_key: str,
-        session: Session,
-    ):
+    def __init__(self, session_id: str, ai_key: str, session: Session):
         self.ai_key = ai_key
         self.session = session
         self.session_id = session_id
@@ -36,7 +43,8 @@ class MysqlChatMessageHistory(BaseChatMessageHistory):
         """Retrieve all messages from db"""
         with get_db_session() as session:
             result = session.query(ExpertGPTsChatMessage).where(
-                ExpertGPTsChatMessage.session_id == self.session_id
+                ExpertGPTsChatMessage.session_id == self.session_id,
+                ExpertGPTsChatMessage.ai_key == self.ai_key,
             )
             items = [json.loads(record.message) for record in result]
             messages = messages_from_dict(items)

@@ -17,3 +17,22 @@ services:
       - MYSQL_DATABASE=experts_gpt
     volumes:
       - ./mariadb_data:/var/lib/mysql/
+#  app:
+#    image: expert_gpts
+#    container_name: app
+#    build:
+#        context: .
+#        dockerfile: Dockerfile
+#    ports:
+#      - "8000:8000"
+#    command: ["tail", "-f", '/dev/null']
+#    volumes:
+#      - ./:/app
+#      - ./huggingface_hub:/root/.cache/huggingface/hub/
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu]

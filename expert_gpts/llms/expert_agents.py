@@ -2,7 +2,9 @@ import logging
 from typing import Dict, List, Optional
 
 from langchain.agents import Tool
+from langchain.memory.chat_memory import BaseChatMemory, BaseMemory
 from langchain.prompts import ChatPromptTemplate
+from langchain.schema import BaseChatMessageHistory
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
@@ -12,6 +14,7 @@ from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
 from expert_gpts.llms.chat_managers import SingleChatManager
 from expert_gpts.llms.providers.openai import OpenAIApiManager
 from shared.config import ExpertItem
+from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO
 from shared.llms.system_prompts import (
     PROMPT_ENGINEER_HUMAN_PROMPT,
@@ -48,6 +51,8 @@ class ExpertAgentManager(metaclass=Singleton):
         experts_config: Dict[str, Optional[ExpertItem]],
         key_prefix: str = "",
         session_id: str = "same-session",
+        memory: Optional[BaseMemory] = None,
+        history: Optional[BaseChatMessageHistory] = None,
     ) -> List[Tool]:
         tools = []
         with get_db_session() as session:
@@ -73,23 +78,16 @@ class ExpertAgentManager(metaclass=Singleton):
                         f"{expert_model.expert_agent_tool_prompt}"
                     )
 
-                chat = SingleChatManager(
-                    api,
-                    expert_key,
-                    expert_config=expert,
+                chat = self.get_expert_chat(
+                    experts_config,
+                    llm_manager=api,
+                    embeddings_factory=EmbeddingsHandlerFactory(),
+                    expert_key=expert_key,
                     session_id=session_id,
-                    embeddings=EmbeddingsHandlerFactory().get_expert_embeddings(
-                        api,
-                        expert_key,
-                        expert.embeddings.__root__ if expert.embeddings else {},
-                    ),
-                    query_memory_before_ask=expert.query_memory_before_ask,
-                    enable_history_fuzzy_search=expert.enable_history_fuzzy_search,
-                    fuzzy_search_distance=expert.fuzzy_search_distance,
-                    fuzzy_search_limit=expert.fuzzy_search_limit,
-                    enable_summary_memory=expert.enable_summary_memory,
-                    create_standalone_question_to_search_context=expert.create_standalone_question_to_search_context,
+                    memory=memory,
+                    history=history,
                 )
+
                 tools.append(
                     Tool(
                         name=expert_key,
@@ -121,3 +119,32 @@ class ExpertAgentManager(metaclass=Singleton):
         )
         logger.debug(f"Optimized prompt: {optimized_prompt}")
         return optimized_prompt
+
+    def get_expert_chat(
+        self,
+        experts_map: Dict[str, ExpertItem],
+        llm_manager: BaseLLMManager,
+        embeddings_factory: EmbeddingsHandlerFactory,
+        expert_key: str,
+        session_id: str = "same-session",
+        history: Optional[BaseChatMessageHistory] = None,
+        memory: Optional[BaseChatMemory] = None,
+    ):
+        expert_config = [
+            expert_config
+            for dict_expert_key, expert_config in experts_map.items()
+            if dict_expert_key == expert_key
+        ][0]
+        return SingleChatManager(
+            llm_manager,
+            expert_key,
+            expert_config=expert_config,
+            session_id=session_id,
+            embeddings=embeddings_factory.get_expert_embeddings(
+                llm_manager, expert_key, expert_config.embeddings.__root__
+            ),
+            query_embeddings_before_ask=expert_config.query_embeddings_before_ask,
+            create_standalone_question_to_search_context=expert_config.create_standalone_question_to_search_context,
+            history=history,
+            memory=memory,
+        )

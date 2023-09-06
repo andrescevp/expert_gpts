@@ -77,7 +77,9 @@ class BaseLLMManager(metaclass=Singleton):
     ) -> str:
         pass
 
-    def get_llm(self, max_tokens, model, temperature) -> BaseChatModel:
+    def get_llm(
+        self, max_tokens, model, temperature, as_predictor: bool = False
+    ) -> BaseChatModel:
         pass
 
     def get_agent_executor(

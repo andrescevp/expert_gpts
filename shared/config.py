@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import yaml
 from langchain.prompts import ChatPromptTemplate
@@ -8,14 +8,6 @@ from langchain.schema.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 from shared.llms.openai import GPT_3_5_TURBO
-
-
-class MemoryTypeEnum(Enum):
-    JSON = "json"
-
-
-class EmbeddingStorageEnum(Enum):
-    CSV = "csv"
 
 
 class DefaultAgentTools(Enum):
@@ -55,12 +47,9 @@ class ExpertItem(BaseModel):
     model_as_tool: str = GPT_3_5_TURBO
     temperature_as_tool: float = 0.5
     tool_return_direct: bool = False
-    query_memory_before_ask: bool = True
-    enable_history_fuzzy_search: bool = False
-    fuzzy_search_distance: int = 5
-    fuzzy_search_limit: int = 5
-    enable_summary_memory: bool = True
+    query_embeddings_before_ask: bool = True
     create_standalone_question_to_search_context: bool = True
+    memory_type: Literal["default", "summary"] = "default"
 
     def get_chat_messages(self, text) -> List[BaseMessage]:
         template = ChatPromptTemplate.from_messages(
@@ -94,14 +83,9 @@ class Chain(BaseModel):
             __root__=dict(default=EmbeddingItem(content="just a placeholder"))
         )
     )
-    get_from_memory_as_tool: bool = True
-    save_in_memory_as_tool: bool = True
-    query_memory_before_ask: bool = True
-    enable_history_fuzzy_search: bool = False
-    fuzzy_search_distance: int = 5
-    fuzzy_search_limit: int = 5
-    enable_summary_memory: bool = True
-    enable_memory: bool = True
+    get_embeddings_as_tool: bool = True
+    save_embeddings_as_tool: bool = True
+    memory_type: Literal["default", "summary"] = "default"
 
 
 class CustomModule(BaseModel):

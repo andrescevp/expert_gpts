@@ -75,7 +75,7 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
 
         llm_predictor = LLMPredictor(
             llm=llm_manager.get_llm(
-                max_tokens=256, temperature=0.9, model=GPT_3_5_TURBO
+                max_tokens=256, temperature=0.9, model=GPT_3_5_TURBO, as_predictor=True
             )
         )
         node_parser = SimpleNodeParser(

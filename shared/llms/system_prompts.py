@@ -6,7 +6,7 @@ from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
 
 from shared.config import DefaultAgentTools, ExpertItem, Prompts
 
-PROMPTS_FILE_PATH = os.getenv("PROMPTS_FILE_PATH", "prompts.yaml")
+PROMPTS_FILE_PATH = os.getenv("PROMPTS_FILE_PATH", "shared/experts_gpt.yaml")
 
 with open(PROMPTS_FILE_PATH) as f:
     config_prompts = yaml.safe_load(f)

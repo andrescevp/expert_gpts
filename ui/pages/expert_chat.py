@@ -9,7 +9,7 @@ from dash import ALL, Input, Output, State, dcc, html
 from langchain.schema.messages import AIMessage, HumanMessage
 
 from expert_gpts.llms.chat_managers import get_history
-from expert_gpts.llms.main import LLMConfigBuilder
+from expert_gpts.main import LLMConfigBuilder
 from ui.components.chat import CHAT_COMPONENT_TEMPLATE
 from ui.components.chat_history import create_chat_list
 from ui.components.chat_messages import get_system_chat_item, get_user_chat_item
