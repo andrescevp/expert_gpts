@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from typing import List, Optional
 
 import langchain
@@ -10,10 +11,13 @@ from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
+from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
 
-from expert_gpts.llms.base import BaseLLMManager, Cost
+from expert_gpts.llms.agent import HUMAN_SUFFIX, SYSTEM_PREFIX, ConvoOutputCustomParser
+from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
+from shared.llms.system_prompts import get_open_ai_prompt_template
 
 langchain.debug = True
 
@@ -27,22 +31,33 @@ COSTS = {
 
 
 class OpenAIApiManager(BaseLLMManager):
+    _agents = {}
+
     def __init__(self):
         super().__init__(COSTS)
 
     def get_agent_executor(
         self,
         llm,
-        llm_key: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
+        system_message: Optional[str] = SYSTEM_PREFIX,
+        human_message: Optional[str] = HUMAN_SUFFIX,
     ) -> AgentExecutor:
+        agent_kwargs = {
+            "output_parser": ConvoOutputCustomParser(),
+        }
+        if system_message:
+            agent_kwargs["system_message"] = system_message
+        if human_message:
+            agent_kwargs["human_message"] = human_message
         return initialize_agent(
             tools=tools,
             llm=llm,
-            agent=llm_key,
+            agent=agent_type,
             memory=memory,
-            handle_parsing_errors="Check your output and make sure it conforms!",
+            agent_kwargs=agent_kwargs,
         )
 
     def create_chat_completion(
@@ -55,33 +70,44 @@ class OpenAIApiManager(BaseLLMManager):
         openai_api_key=None,
     ) -> str:
         llm = self.get_llm(max_tokens, model, temperature)
+
         with get_openai_callback() as cb:
-            response = llm(messages)
+            response = llm(messages, callbacks=[self.callbacks_handler])
         self.update_cost(cb)
         return response.content
 
     def create_chat_completion_with_agent(
         self,
         user_input: str,  # type: ignore
-        agent_name: AgentType = AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        agent_type: AgentType = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         model: str | None = GPT_3_5_TURBO,
+        agent_key: str = "default",
         temperature: float = 0,
         max_tokens: int | None = None,
         memory: Optional[BaseChatMemory] = None,
         tools: Optional[List[Tool]] = None,
-        history: Optional[List[BaseMessage]] = None,
     ) -> str:
         llm = self.get_llm(max_tokens, model, temperature)
-        agent = self.get_agent_executor(llm, agent_name, memory, tools)
+        if agent_key not in self._agents:
+            self._agents[agent_key] = self.get_agent_executor(
+                llm, agent_type, memory, tools
+            )
+        agent = self._agents[agent_key]
         with get_openai_callback() as cb:
-            response = agent.run(input=user_input, chat_history=history)
+            response = agent.run(input=user_input, callbacks=[self.callbacks_handler])
         self.update_cost(cb)
         return response
 
-    def get_llm(self, max_tokens, model, temperature) -> BaseChatModel:
+    @lru_cache
+    def get_llm(
+        self, max_tokens, model, temperature, as_predictor: bool = False
+    ) -> BaseChatModel:
         llm = ChatOpenAI(
             model_name=model,
             temperature=temperature,
             max_tokens=max_tokens,
         )
         return llm
+
+    def get_prompt_template(self) -> PromptTemplate:
+        return get_open_ai_prompt_template()

@@ -13,3 +13,10 @@ psycopg==3.1.10
 SQLAlchemy==2.0.20
 psycopg2==2.9.7
 click==8.1.7
+pymysql==1.1.0
+transformers==4.31.0
+einops==0.6.1
+accelerate==0.22.0
+bitsandbytes==0.41.1
+scipy==1.11.2
+xformers==0.0.21

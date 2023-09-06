@@ -1,13 +1,16 @@
+import logging
+
 import dash
 import dash_bootstrap_components as dbc
+import torch
 from dash import Dash, html
 from dotenv import load_dotenv
 
 from ui.config import get_configs
 
+load_dotenv()
 configurations = get_configs()
 # load expert_gpts.yaml
-load_dotenv()
 
 # read all .yaml files in CONFIGS_PATH and create a list of dicts with the config, the file name and the file path
 
@@ -15,7 +18,7 @@ load_dotenv()
 app = Dash(
     __name__,
     use_pages=True,
-    external_stylesheets=[dbc.themes.DARKLY],
+    external_stylesheets=[dbc.themes.DARKLY, dbc.icons.BOOTSTRAP],
     prevent_initial_callbacks=True,
     suppress_callback_exceptions=True,
 )
@@ -62,5 +65,9 @@ app.layout = html.Div(
     ]
 )
 
+if torch.cuda.is_available():
+    logging.warning("GPU is available")
+else:
+    logging.warning("GPU is not available")
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=8000)

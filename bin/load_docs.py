@@ -4,7 +4,7 @@ This file is used to load the documents to vector db
 
 import click
 
-from expert_gpts.llms.main import LLMConfigBuilder
+from expert_gpts.main import LLMConfigBuilder
 from shared.config import load_config
 
 

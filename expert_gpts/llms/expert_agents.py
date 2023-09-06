@@ -2,16 +2,26 @@ import logging
 from typing import Dict, List, Optional
 
 from langchain.agents import Tool
+from langchain.memory.chat_memory import BaseChatMemory, BaseMemory
 from langchain.prompts import ChatPromptTemplate
-from langchain.prompts.chat import HumanMessagePromptTemplate, SystemMessage
+from langchain.schema import BaseChatMessageHistory
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 from expert_gpts.database import get_db_session
 from expert_gpts.database.expert_agents import ExpertAgentToolPrompt
-from expert_gpts.llms.openai import OpenAIApiManager
+from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
+from expert_gpts.llms.chat_managers import SingleChatManager
+from expert_gpts.llms.providers.openai import OpenAIApiManager
 from shared.config import ExpertItem
+from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO
+from shared.llms.system_prompts import (
+    PROMPT_ENGINEER_HUMAN_PROMPT,
+    PROMPT_ENGINEER_SYSTEM_PROMPT,
+    PROMPT_TOOL_ENGINEER_HUMAN_PROMPT,
+    PROMPT_TOOL_ENGINEER_SYSTEM_PROMPT,
+)
 from shared.patterns import Singleton
 
 AGENT_TOOL_GENERATOR_MODEL = GPT_3_5_TURBO
@@ -24,46 +34,25 @@ api = OpenAIApiManager()
 class ExpertAgentManager(metaclass=Singleton):
     tool_generator_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(
-                content="AI Tool Description Generator: I specialize in interpreting System AI prompts "
-                "and crafting precise tool descriptions for other AI systems. These descriptions "
-                "provide insights into the intended usage of the described AI to be "
-                "understandable by other AIs. "
-                "The format I "
-                "adhere to is: 'useful for ... [tool description]. "
-                "This tool must be used only if the input falls into the described functionality.'"
-                "Input should be a complete sentence. "
-                "I never answer questions outside of my expertise.",
-                name="AgentToolCreator",
-            ),
-            HumanMessagePromptTemplate.from_template(
-                "Please, generate a tool description from this AI System Prompt: {text}"
-            ),
+            PROMPT_TOOL_ENGINEER_SYSTEM_PROMPT,
+            PROMPT_TOOL_ENGINEER_HUMAN_PROMPT,
         ]
     )
 
     system_prompt_expert_prompt = ChatPromptTemplate.from_messages(
         [
-            SystemMessage(
-                content="Prompt Optimization Guidance: In my role as a Senior Prompt Engineer at OpenAI, "
-                "I'm here to provide expert assistance in optimizing prompts for superior "
-                "results. I specialize in refining prompts to achieve the utmost accuracy and "
-                "relevance. I'll offer you optimized prompt suggestions that align with your "
-                "goals. Share your objectives and the context of your task, and I'll ensure that "
-                "the answer I provide is the optimized prompt that generates the desired "
-                "outcomes. Let's collaborate to create prompts that empower our AI models to "
-                "deliver exceptional performance. I never answer questions outside of my "
-                "expertise.",
-                name="PromptExpertMyGpt",
-            ),
-            HumanMessagePromptTemplate.from_template(
-                "Please, optimize this SYSTEM prompt: {text}"
-            ),
+            PROMPT_ENGINEER_SYSTEM_PROMPT,
+            PROMPT_ENGINEER_HUMAN_PROMPT,
         ]
     )
 
     def get_experts_as_agent_tools(
-        self, experts_config: Dict[str, Optional[ExpertItem]], key_prefix: str = ""
+        self,
+        experts_config: Dict[str, Optional[ExpertItem]],
+        key_prefix: str = "",
+        session_id: str = "same-session",
+        memory: Optional[BaseMemory] = None,
+        history: Optional[BaseChatMessageHistory] = None,
     ) -> List[Tool]:
         tools = []
         with get_db_session() as session:
@@ -89,15 +78,20 @@ class ExpertAgentManager(metaclass=Singleton):
                         f"{expert_model.expert_agent_tool_prompt}"
                     )
 
+                chat = self.get_expert_chat(
+                    experts_config,
+                    llm_manager=api,
+                    embeddings_factory=EmbeddingsHandlerFactory(),
+                    expert_key=expert_key,
+                    session_id=session_id,
+                    memory=memory,
+                    history=history,
+                )
+
                 tools.append(
                     Tool(
                         name=expert_key,
-                        func=lambda q: api.create_chat_completion(
-                            expert.get_chat_messages(q),
-                            model=expert.model_as_tool,
-                            max_tokens=expert.max_tokes_as_tool,
-                            temperature=expert.temperature_as_tool,
-                        ),
+                        func=lambda q: chat.ask(q),
                         description=expert_model.expert_agent_tool_prompt,
                         return_direct=expert.tool_return_direct,
                     )
@@ -125,3 +119,32 @@ class ExpertAgentManager(metaclass=Singleton):
         )
         logger.debug(f"Optimized prompt: {optimized_prompt}")
         return optimized_prompt
+
+    def get_expert_chat(
+        self,
+        experts_map: Dict[str, ExpertItem],
+        llm_manager: BaseLLMManager,
+        embeddings_factory: EmbeddingsHandlerFactory,
+        expert_key: str,
+        session_id: str = "same-session",
+        history: Optional[BaseChatMessageHistory] = None,
+        memory: Optional[BaseChatMemory] = None,
+    ):
+        expert_config = [
+            expert_config
+            for dict_expert_key, expert_config in experts_map.items()
+            if dict_expert_key == expert_key
+        ][0]
+        return SingleChatManager(
+            llm_manager,
+            expert_key,
+            expert_config=expert_config,
+            session_id=session_id,
+            embeddings=embeddings_factory.get_expert_embeddings(
+                llm_manager, expert_key, expert_config.embeddings.__root__
+            ),
+            query_embeddings_before_ask=expert_config.query_embeddings_before_ask,
+            create_standalone_question_to_search_context=expert_config.create_standalone_question_to_search_context,
+            history=history,
+            memory=memory,
+        )

@@ -4,7 +4,7 @@ from dataclasses import asdict
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output, dcc, html
+from dash import Input, Output, State, dcc, html
 
 from expert_gpts.llms.expert_agents import ExpertAgentManager
 from ui.components.chat_messages import get_system_chat_item, get_user_chat_item
@@ -26,8 +26,10 @@ form = [
         children=[
             dbc.InputGroup(
                 [
-                    dbc.Textarea(placeholder="my questions", id="user-prompt"),
-                    dbc.Button("Send", id="send-button"),
+                    dbc.Textarea(
+                        placeholder="my questions", id="%s-user-prompt" % COMPONENT_ID
+                    ),
+                    dbc.Button("Send", id="%s-send-button" % COMPONENT_ID),
                 ],
             ),
             dbc.Badge(
@@ -68,9 +70,9 @@ def layout():
     Output("%s-last-message-time" % COMPONENT_ID, "children"),
     Output("%s-web-chat-page-memory" % COMPONENT_ID, "data", allow_duplicate=True),
     Input("%s-last-message-time" % COMPONENT_ID, "children"),
-    Input("send-button", "n_clicks"),
-    Input("send-button", "n_clicks_timestamp"),
-    Input("user-prompt", "value"),
+    Input("%s-send-button" % COMPONENT_ID, "n_clicks"),
+    Input("%s-send-button" % COMPONENT_ID, "n_clicks_timestamp"),
+    Input("%s-user-prompt" % COMPONENT_ID, "value"),
     Input("%s-chat-history" % COMPONENT_ID, "children"),
     prevent_initial_call=True,
 )
@@ -100,7 +102,7 @@ def add_chat_item(last_send, n_clicks, n_clicks_timestamp, user_prompt, history)
 @dash.callback(
     Output("%s-chat-history" % COMPONENT_ID, "children", allow_duplicate=True),
     Output("%s-web-chat-page-memory" % COMPONENT_ID, "data", allow_duplicate=True),
-    Input("%s-web-chat-page-memory" % COMPONENT_ID, "data"),
+    State("%s-web-chat-page-memory" % COMPONENT_ID, "data"),
     Input("%s-chat-history" % COMPONENT_ID, "children"),
     prevent_initial_call=True,
 )

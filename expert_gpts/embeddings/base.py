@@ -3,7 +3,7 @@ from typing import List
 from langchain.agents import Tool
 
 
-class MemoryBase:
+class EmbeddingsHandlerBase:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -13,5 +13,5 @@ class MemoryBase:
     def save(self, remember_this: List[str]):
         raise NotImplementedError
 
-    def get_agent_tools(self) -> List[Tool]:
+    def get_embeddings_tool_get_memory(self) -> List[Tool]:
         raise NotImplementedError

@@ -2,60 +2,64 @@
 #  package: my_code.my_tools
 #  attribute: TOOLS
 chain:
-  chain_key: 'my_chain'
-  temperature: 0.7
+  chain_key: 'full_stack_developer'
+  temperature: 0
   max_tokens: ~
   model: gpt-3.5-turbo
+  get_embeddings_as_tool: false
+  save_embeddings_as_tool: false
+  query_embeddings_before_ask: false
+  enable_summary_memory: true
+  enable_memory: true
   embeddings:
     my_general_internal_knowledge:
       folder_path: ./documents
     some_test:
       content: |
         Joe Black is a fictional character from the 1998 American fantasy drama film Meet Joe Black.
-enable_memory_tools: True
-enabled_default_agent_tools:
-  - generalist_expert
-  - summarize_expert
-  - no_code_python_functions_expert
-  - thinker_expert
+enabled_default_agent_tools: ~
+#  - generalist_expert
+#  - summarize_expert
+#  - no_code_python_functions_expert
+#  - thinker_expert
 experts:
-  marketing_expert:
-    use_as_tool: True
-    name: Marketing Expert 🚀
+  python_expert:
+    name: Senior Python Developer 🚀
+    model: gpt-4
+    temperature: 1
+    max_tokens: 4000
+    use_as_tool: true
+    max_tokes_as_tool: 4000
+    model_as_tool: gpt-3.5-turbo
+    temperature_as_tool: 0.5
+    tool_return_direct: false
+    query_embeddings_before_ask: true
+    enable_summary_memory: true
     prompts:
       system: |
-        Welcome to the Marketing Assistant! I'm here to help you streamline and enhance your marketing efforts.
-        Whether you're looking to craft compelling content, develop effective social media strategies,
-        optimize your SEO, or analyze campaign performance, I've got you covered.
-        Feel free to ask for assistance with creating engaging ad copy, identifying target audiences,
-        brainstorming creative campaign ideas, or any other marketing-related tasks you have in mind.
-        Let's work together to elevate your brand and drive impactful results!
+        I am a Senior Python Developer with 10+ years of experience in Python programming.
     embeddings:
       my_internal_knowledge:
         content: |
           some helpful content
-  stock_market_expert:
-    use_as_tool: True
-    name: Stock Market Expert 💲
+  react_nextjs_expert:
+    use_as_tool: true
+    name: Senior JS Developer 💲
     prompts:
       system: |
-        Welcome to the Stock Market Expert Chat Bot! I'm here to provide you with insights, analysis,
-        and information about the dynamic world of stock markets.
-        Whether you're looking for real-time market updates, investment strategies,
-        or company-specific news, I've got you covered.
-        Feel free to ask about stock trends, market indices, individual company performance,
-        or any other investment-related queries you have. Let's navigate the exciting realm of stocks together!
+        I am a Senior React Developer with 10+ years of experience in JS programming. I am able to write performant and scalable React applications.
+        I am able to write performant and scalable NextJS applications.
     embeddings:
       my_internal_knowledge:
         content: |
           This is just a test document
-  surveys_expert:
-    use_as_tool: True
-    name: Surveys Expert 💲
+  css_expert:
+    use_as_tool: true
+    name: Senior CSS Developer 💲
     prompts:
       system: |
-        I am an expert thinking the best surveys for the provided topic.
-        I am able to provide insights about how the UI should looks for the survey.
+        I am a Senior CSS Developer with 10+ years of experience in CSS programming. I am able to write performant and scalable CSS applications.
+        I am able to write performant and scalable CSS applications using Tailwind Framework.
     embeddings:
       my_internal_knowledge:
         content: |

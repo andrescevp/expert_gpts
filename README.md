@@ -2,6 +2,10 @@
 
 This is a framework to configure LangChain GPTs for different tasks driven by a simple config file.
 
+# DISCLAIMER: This repo is WIP and can change drastically in the future.
+
+## Looking collaborators to improve it!
+
 ## Installation
 
 1. Create configs files and edit them.
@@ -17,10 +21,6 @@ cp .env.dist .env # edit it specially OPENAI_API_KEY
 # optionally create a virtual environment
 python -m venv venv
 ./venv/bin/activate
-
-# if you have not the postgres binaries installed on your system
-# install it with your package manager
-pip install psycopg-binary
 
 pip install -r requirements.txt
 ```
@@ -48,11 +48,15 @@ A chain is a sequence of experts. The output of an expert is the input of the ne
 A chain have available all the experts as tools and other generic tools you can setup in the config file.
 A chain have also a memory (Embeddings) that is available only for the chain under a llama index implementation.
 
-## Memory VS History
+## Embeddings VS History
 
-Memory (Embeddings) is a vector database that is used to store the context of the question and the answer of the expert.
+Embeddings is a vector database that is used to store the context of the question and the answer of the expert.
 
 History is a database that store the question and the answer of the expert or the chain per user with a session id.
+It is implemented with MariaDB because it allows to use an implementation of fuzzy search using levenstein.
+So what the history is a selection of messages based in the proximity of the question.
+
+@see: https://lucidar.me/en/web-dev/levenshtein-distance-in-mysql/
 
 ## Infra.
 
@@ -60,7 +64,7 @@ This project uses:
 
 - RedisStack to store vector databases.
 - LLama Index to manage the vector databases.
-- Postgres to store the history.
+- MariaDB to store the history.
 - Dash from Plotly to create the UI.
 
 # Extending
@@ -112,3 +116,11 @@ custom_tools:
   package: my_code.my_tools
   attribute: TOOLS
 ```
+
+### Tweaking experts and tools
+
+```bash
+cp ./shared/experts_gpt.yaml ./my_code/experts_gpt.yaml
+```
+
+You copy the prompts file and point `PROMPTS_FILE_PATH` env to your new file.

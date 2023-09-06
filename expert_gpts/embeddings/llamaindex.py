@@ -19,10 +19,14 @@ from llama_index.response.schema import RESPONSE_TYPE
 from llama_index.storage.storage_context import StorageContext
 from llama_index.vector_stores import RedisVectorStore
 
-from expert_gpts.llms.base import BaseLLMManager
-from expert_gpts.memory.base import MemoryBase
+from expert_gpts.embeddings.base import EmbeddingsHandlerBase
 from shared.config import EMBEDDINGS_TYPE
+from shared.llm_manager_base import BaseLLMManager
 from shared.llms.openai import GPT_3_5_TURBO
+from shared.llms.system_prompts import (
+    GET_MEMORIES_TOOL_PROMPT,
+    SAVE_MEMORIES_TOOL_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,29 +36,14 @@ embeddings = OpenAIEmbeddings()
 
 # https://zeeshankhawar.medium.com/connecting-chatgpt-with-your-own-data-using-llama-index-and-langchain-74ba79fb7429
 # https://betterprogramming.pub/llamaindex-how-to-use-index-correctly-6f928b8944c6
-# https://medium.com/badal-io/exploring-langchain-and-llamaindex-to-achieve-standardization-and-interoperability-in-large-2b5f3fabc360
+# https://medium.com/badal-io/exploring-langchain-and-llamaindex-to-achieve-standardization-and-interoperability-in
+# -large-2b5f3fabc360
 # https://www.pinecone.io/learn/series/langchain/langchain-conversational-memory/
 # https://dev.to/iamadhee/combine-langchain-llama-index-1068
 # https://cobusgreyling.medium.com/llamaindex-chat-engine-858311dfb8cb
 
 
-class LlamaIndexMemory(MemoryBase):
-    get_memories_tool_prompt = """
-useful for remember or gather relevant information about a question,
-this tool should be used in any chain to try to get information before actually
-call other actions, this tool can be
-used to get data provided by the user in previous conversations.
-If there is not relevant information another action should follow to find the
-right answer. Input should be a string.
-    """
-
-    save_memories_tool_prompt = """
-useful to save relevant information about a question or information you believe is
-relevant and will be useful to know and understand to reach your goals,
-this tool should be used always to store relevant information and be able to
-query the history of the conversation. Input should be a string.
-    """
-
+class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
     def __init__(
         self,
         llm_manager: BaseLLMManager,
@@ -86,7 +75,7 @@ query the history of the conversation. Input should be a string.
 
         llm_predictor = LLMPredictor(
             llm=llm_manager.get_llm(
-                max_tokens=256, temperature=0.9, model=GPT_3_5_TURBO
+                max_tokens=256, temperature=0.9, model=GPT_3_5_TURBO, as_predictor=True
             )
         )
         node_parser = SimpleNodeParser(
@@ -128,23 +117,16 @@ query the history of the conversation. Input should be a string.
         for document in documents:
             self.index.insert(document)
 
-    def get_agent_tools(
-        self, with_save: bool = False, tool_key: str = "default"
-    ) -> List[Tool]:
-        get_memories = Tool(
+    def get_embeddings_tool_get_memory(self, tool_key: str = "default") -> Tool:
+        return Tool(
             name=f"{tool_key}_get_memories",
             func=lambda q: str(self.search(q)),
-            description=self.get_memories_tool_prompt,
+            description=GET_MEMORIES_TOOL_PROMPT,
         )
 
-        if not with_save:
-            return [get_memories]
-
-        return [
-            get_memories,
-            Tool(
-                name=f"{tool_key}_save_memory",
-                func=lambda q: str(self.save([q])),
-                description=self.save_memories_tool_prompt,
-            ),
-        ]
+    def get_embeddings_tool_save_memory(self, tool_key: str = "default") -> Tool:
+        return Tool(
+            name=f"{tool_key}_save_memory",
+            func=lambda q: str(self.save([q])),
+            description=SAVE_MEMORIES_TOOL_PROMPT,
+        )
