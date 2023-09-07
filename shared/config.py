@@ -24,6 +24,7 @@ class EmbeddingItem(BaseModel):
 
 class Prompts(BaseModel):
     system: str
+    tool: Optional[str] = None
 
 
 EMBEDDINGS_TYPE = Dict[str, Optional[EmbeddingItem]]

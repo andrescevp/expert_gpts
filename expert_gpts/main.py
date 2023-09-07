@@ -45,7 +45,7 @@ class LLMConfigBuilder(metaclass=LLMConfigBuilderSingleton):
         self.config = config
         self.module_loader = ModuleLoader()
         self.llm_manager = OpenAIApiManager()
-        self.expert_agent_manager = ExpertAgentManager()
+        self.expert_agent_manager = ExpertAgentManager(self.llm_manager)
         self.embeddings_factory = EmbeddingsHandlerFactory()
         self.default_tools = {}
         if self.config.enabled_default_agent_tools:

@@ -11,7 +11,6 @@ from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
 from langchain_experimental.plan_and_execute import (
     PlanAndExecute,
@@ -22,7 +21,7 @@ from langchain_experimental.plan_and_execute import (
 from expert_gpts.llms.agent import HUMAN_SUFFIX, SYSTEM_PREFIX, ConvoOutputCustomParser
 from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
-from shared.llms.system_prompts import get_open_ai_prompt_template
+from shared.llms.system_prompts import PLANNER_SYSTEM_PROMPT
 
 langchain.debug = True
 
@@ -33,18 +32,6 @@ COSTS = {
     GPT_4: Cost(prompt=0.03, completion=0.05),
     TEXT_ADA_EMBEDDING: Cost(prompt=0.0001, completion=0.0001),
 }
-
-
-PLANNER_SYSTEM_PROMPT = """
-Let's first understand the problem and devise a plan to solve the problem.
-Please output the plan starting with the header 'Plan:'
-and then followed by a numbered list of steps.
-Please make the plan the minimum number of steps required and try to make it with maximal 5 steps
-to accurately complete the task. If the task is a question,
-the final step should almost always be 'Given the above steps taken,
-please respond to the users original question'.
-At the end of your plan, say '<END_OF_PLAN>'
-"""
 
 
 class OpenAIApiManager(BaseLLMManager):
@@ -146,6 +133,3 @@ class OpenAIApiManager(BaseLLMManager):
             max_tokens=max_tokens,
         )
         return llm
-
-    def get_prompt_template(self) -> PromptTemplate:
-        return get_open_ai_prompt_template()

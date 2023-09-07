@@ -5,7 +5,7 @@ from langchain.agents import Tool
 
 class EmbeddingsHandlerBase:
     def __init__(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
 
     def search(self, query: str):
         raise NotImplementedError

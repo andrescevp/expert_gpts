@@ -67,7 +67,13 @@ app.layout = html.Div(
 
 if torch.cuda.is_available():
     logging.warning("GPU is available")
+    logging.warning(f"GPU device number: {torch.cuda.current_device()}")
+    logging.warning(f"Number of GPUs available: {torch.cuda.device_count()}")
+    logging.warning(
+        f"Device name: {torch.cuda.get_device_name(torch.cuda.current_device())}"
+    )
 else:
     logging.warning("GPU is not available")
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8000)
