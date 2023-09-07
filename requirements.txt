@@ -1,7 +1,6 @@
 dash-bootstrap-components==1.4.2
 PyYAML==6.0.1
 openai==0.27.8
-langchain[llms]==0.0.266
 dash==2.12.1
 tiktoken==0.4.0
 python-dotenv==1.0.0
@@ -26,3 +25,5 @@ lxml==4.9.3
 python-pptx==0.6.22
 Pillow==9.3.0
 docx2txt==0.8
+langchain==0.0.283
+langchain_experimental==0.0.14

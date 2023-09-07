@@ -1,3 +1,12 @@
+planner_system_prompt: |
+  Let's first understand the problem and devise a plan to solve the problem.
+  Please output the plan starting with the header 'Plan:'
+  and then followed by a numbered list of steps.
+  Please make the plan the minimum number of steps required and try to make it with maximal 5 steps
+  to accurately complete the task. If the task is a question,
+  the final step should almost always be 'Given the above steps taken,
+  please respond to the users original question'.
+  At the end of your plan, say '<END_OF_PLAN>'
 chat_human_prompt_template: |
   Use the Context to search relevant information about the user question.
   Context: {context}

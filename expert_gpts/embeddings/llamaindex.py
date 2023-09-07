@@ -45,6 +45,8 @@ embeddings = OpenAIEmbeddings()
 
 
 class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
+    _instances = {}
+
     def __init__(
         self,
         llm_manager: BaseLLMManager,
@@ -53,19 +55,6 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
         index_prefix: str = "llama",
         load_docs: bool = False,
     ):
-        self.document_strings = []
-        self.documents = []
-        for key, value in embeddings.items():
-            if value.folder_path:
-                self.documents.extend(
-                    SimpleDirectoryReader(value.folder_path, recursive=True).load_data()
-                )
-
-        for key, value in embeddings.items():
-            if value.content:
-                self.document_strings.append(value.content)
-        self.documents.extend(StringIterableReader().load_data(self.document_strings))
-
         vector_store = RedisVectorStore(
             index_name=index_name,
             index_prefix=index_prefix,
@@ -101,6 +90,23 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
                 service_context=service_context,
             )
         else:
+            self.document_strings = []
+            self.documents = []
+            for key, value in embeddings.items():
+                if value.folder_path:
+                    self.documents.extend(
+                        SimpleDirectoryReader(
+                            value.folder_path, recursive=True
+                        ).load_data()
+                    )
+
+            for key, value in embeddings.items():
+                if value.content:
+                    self.document_strings.append(value.content)
+            self.documents.extend(
+                StringIterableReader().load_data(self.document_strings)
+            )
+
             self.index = VectorStoreIndex.from_documents(
                 documents=self.documents,
                 storage_context=storage_context,
@@ -110,6 +116,18 @@ class LlamaIndexEmbeddingsHandler(EmbeddingsHandlerBase):
         self.metadata_postprocessor = MetadataReplacementPostProcessor(
             target_metadata_key="window"
         )
+
+    def __call__(cls, *args, **kwargs):
+        """Call method for the singleton metaclass."""
+        cls_key = None
+        if cls_key not in cls._instances:
+            cls_key = (
+                f"llamaindex_instance_{kwargs['index_name']}_{kwargs['index_prefix']}"
+            )
+
+            cls._instances[cls_key] = cls(*args, **kwargs)
+
+        return cls._instances[cls_key]
 
     def search(self, query: str) -> RESPONSE_TYPE:
         logger.debug(f"query: {query}")

@@ -11,13 +11,17 @@ from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
+from langchain_experimental.plan_and_execute import (
+    PlanAndExecute,
+    load_agent_executor,
+    load_chat_planner,
+)
 
 from expert_gpts.llms.agent import HUMAN_SUFFIX, SYSTEM_PREFIX, ConvoOutputCustomParser
 from shared.llm_manager_base import BaseLLMManager, Cost
 from shared.llms.openai import GPT_3_5_TURBO, GPT_4, TEXT_ADA_EMBEDDING
-from shared.llms.system_prompts import get_open_ai_prompt_template
+from shared.llms.system_prompts import PLANNER_SYSTEM_PROMPT
 
 langchain.debug = True
 
@@ -98,6 +102,27 @@ class OpenAIApiManager(BaseLLMManager):
         self.update_cost(cb)
         return response
 
+    def execute_plan(
+        self,
+        user_input: str,  # type: ignore
+        model: str | None = GPT_3_5_TURBO,
+        agent_key: str = "default_plan",
+        temperature: float = 0,
+        max_tokens: int | None = None,
+        tools: Optional[List[Tool]] = None,
+    ) -> str:
+        llm = self.get_llm(max_tokens, model, temperature)
+        if agent_key not in self._agents:
+            planner = load_chat_planner(llm, system_prompt=PLANNER_SYSTEM_PROMPT)
+            executor = load_agent_executor(llm, tools, verbose=True)
+            agent = PlanAndExecute(planner=planner, executor=executor, verbose=True)
+            self._agents[agent_key] = agent
+        agent = self._agents[agent_key]
+        with get_openai_callback() as cb:
+            response = agent.run(input=user_input, callbacks=[self.callbacks_handler])
+        self.update_cost(cb)
+        return response
+
     @lru_cache
     def get_llm(
         self, max_tokens, model, temperature, as_predictor: bool = False
@@ -108,6 +133,3 @@ class OpenAIApiManager(BaseLLMManager):
             max_tokens=max_tokens,
         )
         return llm
-
-    def get_prompt_template(self) -> PromptTemplate:
-        return get_open_ai_prompt_template()

@@ -59,6 +59,19 @@ def layout(config_key=None):
                                             },
                                             className="chain text-break",
                                             value="chain",
+                                            color="success",
+                                            style={"width": "100%"},
+                                        )
+                                    ),
+                                    dbc.ListGroupItem(
+                                        dbc.Button(
+                                            f"{configurations[config_key].config.planner.chain_key} Plan And Execute",
+                                            id={
+                                                "type": "btn-expert-init",
+                                                "index": "planner",
+                                            },
+                                            className="planner text-break",
+                                            value="planner",
                                             color="primary",
                                             style={"width": "100%"},
                                         )
@@ -188,14 +201,20 @@ def get_answer(data, session, config_key, chats_prevs):
     data = WebChatPageState(**data)
     if data.answer:
         return dash.no_update
-    if data.current_expert != "chain":
+    if data.current_expert not in ["chain", "planner"]:
         expert_chat = builder.get_expert_chat(data.current_expert, session["uid"])
         answer = expert_chat.ask(data.current_user_prompt)
         log = expert_chat.get_log()
-    else:
+    elif data.current_expert == "chain":
         chain_chat = builder.get_chain_chat(session["uid"])
         answer = chain_chat.ask(data.current_user_prompt)
         log = chain_chat.get_log()
+    elif data.current_expert == "planner":
+        chain_chat = builder.get_planner(session["uid"])
+        answer = chain_chat.ask(data.current_user_prompt)
+        log = chain_chat.get_log()
+    else:
+        raise ValueError(f"Unknown expert {data.current_expert}")
     chats = [get_system_chat_item(answer)]
     return [
         chats_prevs + chats,
@@ -242,6 +261,20 @@ def get_expert_chat(session_id, config_key, n_clicks, value):
             ],
             last_clicked,
             f"{configurations[config_key].config.chain.chain_key} Chain",
+            create_chat_list(chats_uuids),
+        ]
+    if last_clicked == "planner":
+        chats_uuids = get_chats_list(config.planner.chain_key, session_id["uid"])
+        return [
+            [
+                get_system_chat_item(
+                    """
+                    Hello! I can use all the tools I have to help you to trace a plan to achieve your goal.
+                    """
+                )
+            ],
+            last_clicked,
+            f"{configurations[config_key].config.planner.chain_key} Planner",
             create_chat_list(chats_uuids),
         ]
     chats_uuids = get_chats_list(last_clicked, session_id["uid"])

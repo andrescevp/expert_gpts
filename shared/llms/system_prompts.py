@@ -99,3 +99,6 @@ GET_MEMORIES_TOOL_PROMPT = config_prompts["embedding_tools"][
 SAVE_MEMORIES_TOOL_PROMPT = config_prompts["embedding_tools"][
     "save_embedding_tool_description"
 ]
+
+
+PLANNER_SYSTEM_PROMPT = config_prompts["planner_system_prompt"]

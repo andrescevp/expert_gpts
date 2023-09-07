@@ -10,8 +10,8 @@ from langchain.callbacks.tracers.base import BaseTracer
 from langchain.callbacks.tracers.schemas import Run
 from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import PromptTemplate
 
+from shared.llms.openai import GPT_3_5_TURBO
 from shared.patterns import Singleton
 
 logger = logging.getLogger(__name__)
@@ -106,5 +106,13 @@ class BaseLLMManager(metaclass=Singleton):
         self.total_cost += cb.total_cost
         logger.debug(f"Total running cost: ${self.total_cost:.3f}")
 
-    def get_prompt_template(self) -> PromptTemplate:
+    def execute_plan(
+        self,
+        user_input: str,  # type: ignore
+        model: str | None = GPT_3_5_TURBO,
+        agent_key: str = "default_plan",
+        temperature: float = 0,
+        max_tokens: int | None = None,
+        tools: Optional[List[Tool]] = None,
+    ) -> str:
         pass
