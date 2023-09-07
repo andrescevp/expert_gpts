@@ -3,7 +3,12 @@ import logging
 from functools import lru_cache
 
 from expert_gpts.embeddings.factory import EmbeddingsHandlerFactory
-from expert_gpts.llms.chat_managers import ChainChatManager, get_history, get_memory
+from expert_gpts.llms.chat_managers import (
+    ChainChatManager,
+    PlannerManager,
+    get_history,
+    get_memory,
+)
 from expert_gpts.llms.expert_agents import ExpertAgentManager
 from expert_gpts.llms.providers.openai import OpenAIApiManager
 from expert_gpts.toolkit.modules import ModuleLoader
@@ -100,6 +105,46 @@ class LLMConfigBuilder(metaclass=LLMConfigBuilderSingleton):
             self._expert_tools[expert_tools_key] = expert_tools
 
         return self._expert_tools[expert_tools_key]
+
+    @lru_cache
+    def get_planner(
+        self, session_id: str = "same-session", memory_key: str = "chat_history"
+    ):
+        embeddings = self.embeddings_factory.get_chain_embeddings(
+            self.llm_manager,
+            embeddings=self.config.planner.embeddings.__root__
+            if self.config.planner.embeddings
+            else None,
+            load_docs=False,
+            index_name=self.config.planner.chain_key,
+            index_prefix=f"{self.config.planner.chain_key}_",
+        )
+
+        embeddings_tools = []
+        if self.config.chain.get_embeddings_as_tool:
+            embeddings_tools.append(
+                embeddings.get_embeddings_tool_get_memory(
+                    tool_key=self.config.planner.chain_key
+                )
+            )
+        if self.config.chain.save_embeddings_as_tool:
+            embeddings_tools.append(
+                embeddings.get_embeddings_tool_save_memory(
+                    tool_key=self.config.planner.chain_key
+                )
+            )
+        return PlannerManager(
+            self.llm_manager,
+            temperature=self.config.planner.temperature,
+            max_tokens=self.config.planner.max_tokens,
+            tools=embeddings_tools
+            + self.get_expert_tools(
+                prefix=self.config.planner.chain_key,
+            )
+            + self.custom_tools,
+            model=self.config.planner.model,
+            chain_key=self.config.planner.chain_key,
+        )
 
     @lru_cache
     def get_chain_chat(

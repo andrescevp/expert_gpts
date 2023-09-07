@@ -221,6 +221,51 @@ class ChainChatManager:
         return self.llm_manager.callbacks_handler.log
 
 
+class PlannerManager:
+    _instances = {}
+
+    def __init__(
+        self,
+        llm_manager: BaseLLMManager,
+        temperature: float = 0,
+        max_tokens: int | None = None,
+        chain_key: str = "default",
+        tools: Optional[List[Tool]] = None,
+        model: str | None = None,
+    ):
+        self.chain_key = chain_key
+        self.model = model
+        self.tools = tools
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.llm_manager = llm_manager
+
+    def __call__(cls, *args, **kwargs):
+        """Call method for the singleton metaclass."""
+        cls_key = None
+        if cls_key not in cls._instances:
+            cls_key = f"planner_key_{kwargs['chain_key']}_{kwargs['session_id']}"
+
+            cls._instances[cls_key] = cls(*args, **kwargs)
+
+        return cls._instances[cls_key]
+
+    def ask(self, question):
+        answer = self.llm_manager.execute_plan(
+            question,
+            model=self.model,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            tools=self.tools,
+            agent_key=self.chain_key,
+        )
+
+        return answer
+
+    def get_log(self):
+        return self.llm_manager.callbacks_handler.log
+
+
 def get_standalone_question(
     question, chat_history, llm_manager, temperature, max_tokens, model
 ):

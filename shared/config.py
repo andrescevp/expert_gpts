@@ -73,6 +73,20 @@ class Experts(BaseModel):
     __root__: EXPERT_TYPE
 
 
+class Planner(BaseModel):
+    chain_key: str = "default"
+    temperature: float = 0
+    max_tokens: Optional[int] = None
+    model: str = GPT_3_5_TURBO
+    embeddings: Embeddings = Field(
+        default=Embeddings(
+            __root__=dict(default=EmbeddingItem(content="just a placeholder"))
+        )
+    )
+    get_embeddings_as_tool: bool = True
+    save_embeddings_as_tool: bool = True
+
+
 class Chain(BaseModel):
     chain_key: str = "default"
     temperature: float = 0
@@ -110,6 +124,7 @@ class CustomTools(CustomModule):
 class Config(BaseModel):
     experts: Experts
     chain: Chain = Chain()
+    planner: Planner = Planner()
     enabled_default_agent_tools: Optional[List[DefaultAgentTools]] = Field(
         default=None,
     )

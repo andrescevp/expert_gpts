@@ -13,6 +13,11 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import PromptTemplate
 from langchain.schema.messages import BaseMessage
+from langchain_experimental.plan_and_execute import (
+    PlanAndExecute,
+    load_agent_executor,
+    load_chat_planner,
+)
 
 from expert_gpts.llms.agent import HUMAN_SUFFIX, SYSTEM_PREFIX, ConvoOutputCustomParser
 from shared.llm_manager_base import BaseLLMManager, Cost
@@ -28,6 +33,18 @@ COSTS = {
     GPT_4: Cost(prompt=0.03, completion=0.05),
     TEXT_ADA_EMBEDDING: Cost(prompt=0.0001, completion=0.0001),
 }
+
+
+PLANNER_SYSTEM_PROMPT = """
+Let's first understand the problem and devise a plan to solve the problem.
+Please output the plan starting with the header 'Plan:'
+and then followed by a numbered list of steps.
+Please make the plan the minimum number of steps required and try to make it with maximal 5 steps
+to accurately complete the task. If the task is a question,
+the final step should almost always be 'Given the above steps taken,
+please respond to the users original question'.
+At the end of your plan, say '<END_OF_PLAN>'
+"""
 
 
 class OpenAIApiManager(BaseLLMManager):
@@ -92,6 +109,27 @@ class OpenAIApiManager(BaseLLMManager):
             self._agents[agent_key] = self.get_agent_executor(
                 llm, agent_type, memory, tools
             )
+        agent = self._agents[agent_key]
+        with get_openai_callback() as cb:
+            response = agent.run(input=user_input, callbacks=[self.callbacks_handler])
+        self.update_cost(cb)
+        return response
+
+    def execute_plan(
+        self,
+        user_input: str,  # type: ignore
+        model: str | None = GPT_3_5_TURBO,
+        agent_key: str = "default_plan",
+        temperature: float = 0,
+        max_tokens: int | None = None,
+        tools: Optional[List[Tool]] = None,
+    ) -> str:
+        llm = self.get_llm(max_tokens, model, temperature)
+        if agent_key not in self._agents:
+            planner = load_chat_planner(llm, system_prompt=PLANNER_SYSTEM_PROMPT)
+            executor = load_agent_executor(llm, tools, verbose=True)
+            agent = PlanAndExecute(planner=planner, executor=executor, verbose=True)
+            self._agents[agent_key] = agent
         agent = self._agents[agent_key]
         with get_openai_callback() as cb:
             response = agent.run(input=user_input, callbacks=[self.callbacks_handler])
